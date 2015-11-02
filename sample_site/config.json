@@ -1,0 +1,8 @@
+{
+    "include": ["*"],
+    "exclude": ["config.json"],
+    "include_files": [],
+    "exclude_files": ["_*"],
+    "source": "./",
+    "destination": "./_compiled"
+}
