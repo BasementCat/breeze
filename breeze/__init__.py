@@ -13,11 +13,16 @@ from collections import OrderedDict
 logger = logging.getLogger(__name__)
 
 
+class NotRequirableError(Exception):
+    pass
+
+
 class Breeze(object):
     def __init__(self):
         self.context = {}
         self.files = OrderedDict()
         self.plugins = []
+        self.once_plugins = []
 
     def run(self, args=None, exit=True):
         parser = argparse.ArgumentParser(description="Breeze CLI utility")
@@ -127,12 +132,27 @@ class Breeze(object):
                     self.files[filename] = {'destination': filename}
 
     def _plugin_require(self, plugin):
-        for sub_plugin in plugin.requires():
-            self.plugin(sub_plugin)
+        for sub_plugin_class in plugin.requires():
+            if not sub_plugin_class.requirable:
+                raise NotRequirableError(
+                    'Plugin "{}" required by "{}" cannot be required'.format(sub_plugin_class.__name__, plugin.__class__.__name__),
+                    sub_plugin_class.__name__
+                )
+            self.plugin(sub_plugin_class())
 
     def plugin(self, plugin):
-        self._plugin_require(plugin)
-        self.plugins.append(plugin)
+        try:
+            self._plugin_require(plugin)
+        except NotRequirableError as e:
+            raise NotRequirableError(e[0], plugin.__class__.__name__, *e[1:])
+        plugin_instance = plugin
+        if type(plugin_instance) is type:
+            plugin_instance = plugin_instance()
+        if plugin_instance.run_once:
+            if plugin_instance.__class__ in self.once_plugins:
+                raise NotRequirableError('Plugin "{}" may only run once'.format(plugin_instance.__class__.__name__))
+            self.once_plugins.append(plugin_instance.__class__)
+        self.plugins.append(plugin_instance)
         return self
 
     def run_plugins(self):

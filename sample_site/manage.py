@@ -1,6 +1,7 @@
 from breeze import Breeze
-from breeze.plugins import Contents, Parsed
+from breeze.plugins import Contents, Parsed, Data
+
 
 Breeze() \
-    .plugin(Parsed()) \
+    .plugin(Data()) \
     .run()
