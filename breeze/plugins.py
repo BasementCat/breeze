@@ -2,6 +2,10 @@ import os
 import re
 import json
 import string
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class Plugin(object):
@@ -9,6 +13,7 @@ class Plugin(object):
     requirable = True
 
     def run(self, breeze_instance):
+        logger.debug("Run plugin: %s", self.__class__.__name__)
         self.deletion_queue = []
         self.context = breeze_instance.context
         self.files = breeze_instance.files
@@ -54,10 +59,9 @@ class Data(Plugin):
     run_once = True
     requirable = False
 
-    def __init__(self, dir_name='data', key=None, *args, **kwargs):
+    def __init__(self, dir_name='data', *args, **kwargs):
         super(Data, self).__init__(*args, **kwargs)
         self.dir_name = dir_name
-        self.key = key or self.dir_name
 
     @classmethod
     def requires(self):
@@ -67,12 +71,7 @@ class Data(Plugin):
         for filename, file_data in self.files.items():
             contents = file_data.get('_contents_parsed')
             if contents is not None:
-                key = os.path.splitext(os.path.normpath(os.path.join(self.key, filename)))[0].split(os.sep)
-                key.pop(0)
-                dct = self.context
-                for part in key:
-                    dct = dct.setdefault(part, {})
-                dct.update(contents)
+                self.context.update(contents)
                 self.delete(filename)
 
 

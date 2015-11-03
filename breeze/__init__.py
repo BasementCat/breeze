@@ -150,7 +150,8 @@ class Breeze(object):
             plugin_instance = plugin_instance()
         if plugin_instance.run_once:
             if plugin_instance.__class__ in self.once_plugins:
-                raise NotRequirableError('Plugin "{}" may only run once'.format(plugin_instance.__class__.__name__))
+                logger.warning('Plugin "%s" may only run once', plugin_instance.__class__.__name__)
+                return self
             self.once_plugins.append(plugin_instance.__class__)
         self.plugins.append(plugin_instance)
         return self
