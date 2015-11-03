@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import string
 
 
 class Plugin(object):
@@ -72,3 +73,29 @@ class Data(Plugin):
                 for part in key:
                     dct = dct.setdefault(part, {})
                 dct.update(contents)
+                self.delete(filename)
+
+
+class Frontmatter(Plugin):
+    run_once = True
+
+    @classmethod
+    def requires(self):
+        return [Contents]
+
+    def _run(self):
+        for filename, file_data in self.files.items():
+            try:
+                contents = file_data['_contents']
+            except KeyError:
+                continue
+
+            if contents.startswith('{{{\n'):
+                try:
+                    end_pos = string.index(contents, '\n}}}')
+                except ValueError:
+                    continue
+
+                file_data.update(json.loads('{' + contents[:end_pos + 4].strip().lstrip('{').rstrip('}') + '}'))
+                contents = contents[end_pos + 4:]
+            file_data['_contents'] = contents
