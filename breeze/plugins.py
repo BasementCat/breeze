@@ -1,3 +1,4 @@
+import fnmatch
 import os
 import re
 import json
@@ -5,6 +6,12 @@ import string
 import logging
 
 import yaml
+
+from jinja2 import (
+    BaseLoader,
+    TemplateNotFound,
+    Environment,
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -110,3 +117,35 @@ class Frontmatter(Plugin):
                 file_data.update(yaml.load(contents[:end_pos]))
                 contents = contents[end_pos + 4:]
             file_data['_contents'] = contents
+
+
+class Jinja2(Plugin):
+    run_once = True
+
+    @classmethod
+    def requires(self):
+        return [Contents]
+
+    class _Loader(BaseLoader):
+        def __init__(self, filelist):
+            self.filelist = filelist
+
+        def get_source(self, environment, template):
+            try:
+                contents = self.filelist[template]['_contents']
+                assert contents is not None
+                return contents, template, lambda: False
+            except (KeyError, AssertionError):
+                raise TemplateNotFound(template)
+
+    def _run(self):
+        self.loader = self._Loader(self.files)
+        self.environment = Environment(loader=self.loader)
+        for filename, file_data in self.files.items():
+            if fnmatch.fnmatch(filename, '*.jinja*'):
+                if not file_data.get('skip_render'):
+                    args = {}
+                    args.update(self.context)
+                    args.update(file_data)
+                    file_data['_contents'] = self.environment.get_template(filename).render(**args)
+                    file_data['destination'] = re.sub(ur'\.jinja', '', file_data['destination'])
