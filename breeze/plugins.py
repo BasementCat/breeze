@@ -4,6 +4,7 @@ import re
 import json
 import string
 import logging
+from collections import OrderedDict
 
 import yaml
 
@@ -149,3 +150,12 @@ class Jinja2(Plugin):
                     args.update(file_data)
                     file_data['_contents'] = self.environment.get_template(filename).render(**args)
                     file_data['destination'] = re.sub(ur'\.jinja', '', file_data['destination'])
+
+
+class Weighted(Plugin):
+    def _run(self):
+        weighted_files = []
+        weighted_files = sorted(self.files.items(), key=lambda v: v[1].get('weight', 1000), reverse=False)
+        print weighted_files
+        return False
+        return OrderedDict(weighted_files)

@@ -158,4 +158,6 @@ class Breeze(object):
 
     def run_plugins(self):
         for plugin in self.plugins:
-            plugin.run(self)
+            out = plugin.run(self)
+            if out is not None:
+                self.files = out
