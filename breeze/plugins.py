@@ -4,6 +4,8 @@ import json
 import string
 import logging
 
+import yaml
+
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,8 @@ class Parsed(Plugin):
             if '_contents' in file_data:
                 if filename.endswith('.json'):
                     file_data['_contents_parsed'] = json.loads(file_data['_contents'])
+                elif filename.endswith('.yml') or filename.endswith('.yaml'):
+                    file_data['_contents_parsed'] = yaml.load(file_data['_contents'])
 
 
 class Data(Plugin):
@@ -96,5 +100,13 @@ class Frontmatter(Plugin):
                     continue
 
                 file_data.update(json.loads('{' + contents[:end_pos + 4].strip().lstrip('{').rstrip('}') + '}'))
+                contents = contents[end_pos + 4:]
+            elif contents.startswith('---\n'):
+                try:
+                    end_pos = string.index(contents, '\n---')
+                except ValueError:
+                    continue
+
+                file_data.update(yaml.load(contents[:end_pos]))
                 contents = contents[end_pos + 4:]
             file_data['_contents'] = contents
