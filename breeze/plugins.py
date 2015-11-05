@@ -1,3 +1,4 @@
+from datetime import datetime
 import fnmatch
 import os
 import re
@@ -8,6 +9,7 @@ from collections import OrderedDict
 
 import yaml
 import markdown
+import arrow
 
 from jinja2 import (
     BaseLoader,
@@ -201,6 +203,9 @@ class Concat(Plugin):
 
 class Markdown(Plugin):
     requirable = False
+    # TODO: Add ability to filter on dir, check for run already, and parse only unparsed
+    run_once = True
+
     def __init__(self, change_extension=True, **kwargs):
         self.change_extension = change_extension
         self.markdown_args = kwargs
@@ -218,3 +223,29 @@ class Markdown(Plugin):
                     file_data['_contents'] = markdown.markdown(file_data['_contents'], **self.markdown_args)
                     if self.change_extension:
                         file_data['destination'] = re.sub(ur'\.md$', '.html', file_data['destination'])
+
+
+class Blog(Plugin):
+    requirable = False
+    run_once = True
+
+    def __init__(self, mask='posts/*'):
+        self.mask = mask
+
+    def _run(self):
+        self.context['blog_posts'] = []
+        for filename, file_data in self.files.items():
+            if fnmatch.fnmatch(filename, self.mask):
+                default_data = {
+                    'title': ' '.join([v[0].upper() + v[1:] for v in os.path.basename(filename).split('.')[0].split('-')]),
+                    # TODO: this sucks, do it better
+                    'published': datetime.fromtimestamp(os.path.getmtime(filename)),
+                    'author': 'Anonymous',
+                    'slug': os.path.basename(filename).split('.')[0],
+                    'skip_write': True,
+                }
+                default_data.update(file_data)
+                default_data['published'] = arrow.get(default_data['published'])
+                file_data.update(default_data)
+                self.context['blog_posts'].append(filename)
+        self.context['blog_posts'] = sorted(self.context['blog_posts'], key=lambda v: self.files[v]['published'], reverse=True)

@@ -16,7 +16,7 @@ config = dict(
     url="http://git.dev.nilcat.com/gateway-furmeet/breeze",
     packages=["breeze"],
     install_requires=[
-        'PyYAML', 'jinja2', 'markdown'
+        'PyYAML', 'jinja2', 'markdown', 'arrow',
     ],
     test_suite="nose.collector",
     tests_require=["nose"],

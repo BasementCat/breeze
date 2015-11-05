@@ -1,3 +1,4 @@
+import pprint
 import shutil
 import json
 import re
@@ -89,10 +90,10 @@ class Breeze(object):
         self.run_plugins()
         if self.debuglevel == logging.DEBUG:
             print "--- FILES ---"
-            print json.dumps(self.files, indent=4)
+            pprint.pprint(dict(self.files), indent=4)
             print
             print "--- CONTEXT ---"
-            print json.dumps(self.context, indent=4)
+            pprint.pprint(dict(self.context), indent=4)
             print
         self.write_output()
 
@@ -173,7 +174,7 @@ class Breeze(object):
 
     def write_output(self):
         files = {os.path.join(self.config['destination'], v['destination']): v for v in self.files.values()}
-        dirs = set([os.path.dirname(k) for k in files.keys()])
+        dirs = set([os.path.dirname(k) for k, v in files.items() if not v.get('skip_write')])
 
         try:
             shutil.rmtree(self.config['destination'])
@@ -185,6 +186,8 @@ class Breeze(object):
             os.makedirs(dirname)
 
         for filename, file_data in files.items():
+            if file_data.get('skip_write'):
+                continue
             with open(filename, 'w') as out_fp:
                 contents = file_data.get('_contents')
                 if contents is None:
