@@ -7,6 +7,7 @@ import logging
 from collections import OrderedDict
 
 import yaml
+import markdown
 
 from jinja2 import (
     BaseLoader,
@@ -60,6 +61,8 @@ class Parsed(Plugin):
 
     def _run(self):
         for filename, file_data in self.files.items():
+            if file_data.get('skip_parse'):
+                continue
             file_data['_contents_parsed'] = None
             if '_contents' in file_data:
                 if filename.endswith('.json'):
@@ -194,3 +197,24 @@ class Concat(Plugin):
         new_data['_contents'] = "\n".join(new_contents)
         self.files[self.dest] = new_data
         self.context[self.name] = self.dest
+
+
+class Markdown(Plugin):
+    requirable = False
+    def __init__(self, change_extension=True, **kwargs):
+        self.change_extension = change_extension
+        self.markdown_args = kwargs
+
+    @classmethod
+    def requires(self):
+        return [Contents]
+
+    def _run(self):
+        for filename, file_data in self.files.items():
+            if filename.endswith('.md'):
+                if file_data.get('skip_parse'):
+                    continue
+                if '_contents' in file_data:
+                    file_data['_contents'] = markdown.markdown(file_data['_contents'], **self.markdown_args)
+                    if self.change_extension:
+                        file_data['destination'] = re.sub(ur'\.md$', '.html', file_data['destination'])
