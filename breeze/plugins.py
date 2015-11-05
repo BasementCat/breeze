@@ -154,6 +154,7 @@ class Jinja2(Plugin):
                     args = {}
                     args.update(self.context)
                     args.update(file_data)
+                    args['files'] = self.files
                     file_data['_contents'] = self.environment.get_template(filename).render(**args)
                     file_data['destination'] = re.sub(ur'\.jinja', '', file_data['destination'])
 
