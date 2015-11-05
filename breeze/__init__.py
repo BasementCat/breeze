@@ -78,10 +78,23 @@ class Breeze(object):
         try:
             logger.warning("This development server is for debugging purposes only and not intended to serve real traffic.")
             logger.info("Running development server on http://localhost:%d/", self.config['port'])
-            SocketServer.TCPServer(
-                ('', self.config['port']),
-                SimpleHTTPServer.SimpleHTTPRequestHandler
-            ).serve_forever()
+
+            _breeze_instance = self
+            class _BuildingHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+                def do_GET(self, *args, **kwargs):
+                    _breeze_instance._command_build()
+                    return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self, *args, **kwargs)
+
+            old_dir = os.getcwd()
+            os.chdir(self.config['destination'])
+            try:
+                SocketServer.TCPServer(
+                    ('', self.config['port']),
+                    _BuildingHandler,
+                ).serve_forever()
+            finally:
+                os.chdir(old_dir)
+
         except KeyboardInterrupt:
             logger.debug("Exiting due to ctrl+c")
 
