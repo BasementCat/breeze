@@ -1,3 +1,4 @@
+import shutil
 import json
 import re
 import os
@@ -23,6 +24,7 @@ class Breeze(object):
         self.files = OrderedDict()
         self.plugins = []
         self.once_plugins = []
+        self.debuglevel = logging.ERROR
 
     def run(self, args=None, exit=True):
         parser = argparse.ArgumentParser(description="Breeze CLI utility")
@@ -40,7 +42,8 @@ class Breeze(object):
         args = args or sys.argv
         opts = parser.parse_args(args[1:])
 
-        logging.basicConfig(level=[logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][min(opts.debug or 0, 3)])
+        self.debuglevel = [logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][min(opts.debug or 0, 3)]
+        logging.basicConfig(level=self.debuglevel)
 
         old_dir = os.getcwd()
         os.chdir(os.path.dirname(args[0]))
@@ -84,8 +87,14 @@ class Breeze(object):
     def _command_build(self):
         self.build_filelist()
         self.run_plugins()
-        print self.files
-        print self.context
+        if self.debuglevel == logging.DEBUG:
+            print "--- FILES ---"
+            print json.dumps(self.files, indent=4)
+            print
+            print "--- CONTEXT ---"
+            print json.dumps(self.context, indent=4)
+            print
+        self.write_output()
 
     def build_filelist(self):
         queue = [self.config['source']]
@@ -129,7 +138,7 @@ class Breeze(object):
                     queue.append(filename)
                 else:
                     filename = os.path.relpath(filename, os.path.realpath(os.path.abspath(self.config['source'])))
-                    self.files[filename] = {'destination': filename}
+                    self.files[filename] = {'source': filename, 'destination': filename}
 
     def _plugin_require(self, plugin):
         for sub_plugin_class in plugin.requires():
@@ -161,3 +170,24 @@ class Breeze(object):
             out = plugin.run(self)
             if out is not None:
                 self.files = out
+
+    def write_output(self):
+        files = {os.path.join(self.config['destination'], v['destination']): v for v in self.files.values()}
+        dirs = set([os.path.dirname(k) for k in files.keys()])
+
+        try:
+            shutil.rmtree(self.config['destination'])
+        except OSError:
+            if os.path.exists(self.config['destination']):
+                raise
+
+        for dirname in dirs:
+            os.makedirs(dirname)
+
+        for filename, file_data in files.items():
+            with open(filename, 'w') as out_fp:
+                contents = file_data.get('_contents')
+                if contents is None:
+                    with open(file_data['source'], 'r') as in_fp:
+                        contents = in_fp.read()
+                out_fp.write(contents)
