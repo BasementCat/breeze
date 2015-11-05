@@ -158,3 +158,39 @@ class Weighted(Plugin):
         weighted_files = []
         weighted_files = sorted(self.files.items(), key=lambda v: v[1].get('weight', 1000), reverse=False)
         return OrderedDict(weighted_files)
+
+
+class Concat(Plugin):
+    requirable = False
+
+    def __init__(self, name, dest, mask, filetype=None, merge_data=True, encapsulate_js=True):
+        self.name = name
+        self.dest = dest
+        self.mask = mask
+        self.filetype = filetype or re.split(ur'[^\w\d]+', mask)[-1]
+        self.merge_data = merge_data
+        self.encapsulate_js = encapsulate_js
+
+    @classmethod
+    def requires(self):
+        return [Contents]
+
+    def _run(self):
+        new_data = {}
+        new_contents = []
+
+        for filename, file_data in self.files.items():
+            if fnmatch.fnmatch(filename, self.mask):
+                if self.merge_data:
+                    new_data.update(file_data)
+                contents = file_data.get('_contents') or ''
+                if self.filetype == 'js':
+                    if self.encapsulate_js:
+                        contents = '(function() {\n\n' + contents + '\n\n})();'
+                new_contents.append(contents)
+                self.delete(filename)
+
+        new_data['destination'] = self.dest
+        new_data['_contents'] = "\n".join(new_contents)
+        self.files[self.dest] = new_data
+        self.context[self.name] = self.dest
