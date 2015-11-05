@@ -27,9 +27,10 @@ class Plugin(object):
         self.deletion_queue = []
         self.context = breeze_instance.context
         self.files = breeze_instance.files
-        self._run()
+        out = self._run()
         for filename in self.deletion_queue:
             del self.files[filename]
+        return out
 
     def _run(self):
         raise NotImplementedError("Plugins must implement _run()")
@@ -156,6 +157,4 @@ class Weighted(Plugin):
     def _run(self):
         weighted_files = []
         weighted_files = sorted(self.files.items(), key=lambda v: v[1].get('weight', 1000), reverse=False)
-        print weighted_files
-        return False
         return OrderedDict(weighted_files)
