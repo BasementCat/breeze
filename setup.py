@@ -8,12 +8,12 @@ def read(filen):
  
 config = dict(
     name="breeze",
-    version="0.1a",
+    version="0.1b",
     description="Assemble static sites",
     long_description=read("README.md"),
     author="Alec Elton",
     author_email="alec.elton@gmail.com",
-    url="http://git.dev.nilcat.com/gateway-furmeet/breeze",
+    url="https://github.com/BasementCat/breeze",
     packages=["breeze"],
     install_requires=[
         'PyYAML', 'jinja2', 'markdown', 'arrow', 'libsass',
