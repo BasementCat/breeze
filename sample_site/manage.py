@@ -1,8 +1,9 @@
 from breeze import Breeze
-from breeze.plugins import Contents, Parsed, Data, Frontmatter, Jinja2, Weighted, Concat, Markdown, Blog
+from breeze.plugins import Contents, Parsed, Data, Frontmatter, Jinja2, Weighted, Concat, Markdown, Blog, Promote
 
 
 Breeze() \
+    .plugin(Promote(mask='pages/*')) \
     .plugin(Data()) \
     .plugin(Frontmatter()) \
     .plugin(Weighted()) \

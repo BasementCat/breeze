@@ -253,3 +253,31 @@ class Blog(Plugin):
                 file_data.update(default_data)
                 self.context['blog_posts'].append((filename, file_data))
         self.context['blog_posts'] = sorted(self.context['blog_posts'], key=lambda v: v[1]['published'], reverse=True)
+
+
+class Promote(Plugin):
+    requirable = False
+
+    def __init__(self, mask=None, levels=1):
+        self.mask = mask
+        self.levels = levels
+
+    def _run(self):
+        for filename, file_data in self.breeze_instance.filelist(self.mask):
+            file_dir, file_base = os.path.split(file_data['destination'])
+            for _ in range(self.levels):
+                file_dir = os.path.dirname(file_dir)
+            file_data['destination'] = os.path.join(file_dir, file_base)
+
+
+class Demote(Plugin):
+    requirable = False
+
+    def __init__(self, mask=None, *args):
+        self.mask = mask
+        self.levels = args
+
+    def _run(self):
+        for filename, file_data in self.breeze_instance.filelist(self.mask):
+            file_dir, file_base = os.path.split(file_data['destination'])
+            file_data['destination'] = os.path.join(file_dir, *(self.levels + [file_base]))

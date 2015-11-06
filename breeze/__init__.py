@@ -70,6 +70,7 @@ class Breeze(object):
         logging.basicConfig(level=self.debuglevel)
 
         self.root_directory = os.path.abspath(os.path.dirname(args[0]))
+        bin_file = os.path.relpath(os.path.abspath(args[0]), self.root_directory)
 
         with InDirectory(self.root_directory):
             retcode = 0
@@ -78,7 +79,7 @@ class Breeze(object):
                     self.config = json.load(fp)
 
                 self.config.update(vars(opts))
-                self.config['exclude'] += [self.config['config'], os.path.join(self.root_directory, sys.argv[0])]
+                self.config['exclude'] += [self.config['config'], bin_file]
                 for key in ('include', 'exclude'):
                     self.config[key] = [os.path.realpath(os.path.abspath(v)) for v in self.config[key]]
 
