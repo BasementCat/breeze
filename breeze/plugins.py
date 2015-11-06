@@ -28,6 +28,7 @@ class Plugin(object):
     def run(self, breeze_instance):
         logger.debug("Run plugin: %s", self.__class__.__name__)
         self.deletion_queue = []
+        self.breeze_instance = breeze_instance
         self.context = breeze_instance.context
         self.files = breeze_instance.files
         out = self._run()
@@ -148,15 +149,17 @@ class Jinja2(Plugin):
     def _run(self):
         self.loader = self._Loader(self.files)
         self.environment = Environment(loader=self.loader)
+        self.environment.filters.update(self.context.get('_jinja_filters', {}))
+
         for filename, file_data in self.files.items():
             if fnmatch.fnmatch(filename, '*.jinja*'):
                 if not file_data.get('skip_render'):
-                    args = {}
+                    args = {'filelist': self.breeze_instance.filelist}
                     args.update(self.context)
                     args.update(file_data)
                     args['files'] = self.files
-                    file_data['_contents'] = self.environment.get_template(filename).render(**args)
                     file_data['destination'] = re.sub(ur'\.jinja', '', file_data['destination'])
+                    file_data['_contents'] = self.environment.get_template(filename).render(**args)
 
 
 class Weighted(Plugin):
@@ -248,5 +251,5 @@ class Blog(Plugin):
                 default_data.update(file_data)
                 default_data['published'] = arrow.get(default_data['published'])
                 file_data.update(default_data)
-                self.context['blog_posts'].append(filename)
-        self.context['blog_posts'] = sorted(self.context['blog_posts'], key=lambda v: self.files[v]['published'], reverse=True)
+                self.context['blog_posts'].append((filename, file_data))
+        self.context['blog_posts'] = sorted(self.context['blog_posts'], key=lambda v: v[1]['published'], reverse=True)

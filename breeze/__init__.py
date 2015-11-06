@@ -19,6 +19,22 @@ class NotRequirableError(Exception):
     pass
 
 
+class InDirectory(object):
+    def __init__(self, directory, root=None):
+        self.original_directory = None
+        self.directory = directory
+        if root:
+            self.directory = os.path.join(root, self.directory)
+
+    def __enter__(self):
+        self.original_directory = os.getcwd()
+        os.chdir(self.directory)
+
+    def __exit__(self, type, value, traceback):
+        if self.original_directory and self.original_directory != os.getcwd():
+            os.chdir(self.original_directory)
+
+
 class Breeze(object):
     def __init__(self):
         self.context = {}
@@ -26,6 +42,13 @@ class Breeze(object):
         self.plugins = []
         self.once_plugins = []
         self.debuglevel = logging.ERROR
+        self.root_directory = None
+
+    def filelist(self, pattern=None):
+        for filename, file_data in self.files.items():
+            if pattern and not fnmatch.fnmatch(filename, pattern):
+                continue
+            yield (filename, file_data)
 
     def run(self, args=None, exit=True):
         parser = argparse.ArgumentParser(description="Breeze CLI utility")
@@ -46,29 +69,28 @@ class Breeze(object):
         self.debuglevel = [logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][min(opts.debug or 0, 3)]
         logging.basicConfig(level=self.debuglevel)
 
-        old_dir = os.getcwd()
-        os.chdir(os.path.dirname(args[0]))
-        retcode = 0
-        try:
-            with open(opts.config, 'r') as fp:
-                self.config = json.load(fp)
+        self.root_directory = os.path.abspath(os.path.dirname(args[0]))
 
-            self.config.update(vars(opts))
-            self.config['exclude'] += [self.config['config'], os.path.join(old_dir, sys.argv[0])]
-            for key in ('include', 'exclude'):
-                self.config[key] = [os.path.realpath(os.path.abspath(v)) for v in self.config[key]]
+        with InDirectory(self.root_directory):
+            retcode = 0
+            try:
+                with open(opts.config, 'r') as fp:
+                    self.config = json.load(fp)
 
-            cmd = getattr(self, '_command_' + re.sub(ur'[^\w]', '', args[1].lower()))
+                self.config.update(vars(opts))
+                self.config['exclude'] += [self.config['config'], os.path.join(self.root_directory, sys.argv[0])]
+                for key in ('include', 'exclude'):
+                    self.config[key] = [os.path.realpath(os.path.abspath(v)) for v in self.config[key]]
 
-            retcode = cmd() or 0
-        except Exception as e:
-            if exit:
-                logger.critical('%s: %s', e.__class__.__name__, str(e), exc_info=True)
-                retcode = 1
-            else:
-                raise
-        finally:
-            os.chdir(old_dir)
+                cmd = getattr(self, '_command_' + re.sub(ur'[^\w]', '', args[1].lower()))
+
+                retcode = cmd() or 0
+            except Exception as e:
+                if exit:
+                    logger.critical('%s: %s', e.__class__.__name__, str(e), exc_info=True)
+                    retcode = 1
+                else:
+                    raise
 
         if exit:
             sys.exit(retcode)
@@ -85,30 +107,27 @@ class Breeze(object):
                     _breeze_instance._command_build()
                     return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self, *args, **kwargs)
 
-            old_dir = os.getcwd()
-            os.chdir(self.config['destination'])
-            try:
+            with InDirectory(self.config['destination'], self.root_directory):
                 SocketServer.TCPServer(
                     ('', self.config['port']),
                     _BuildingHandler,
                 ).serve_forever()
-            finally:
-                os.chdir(old_dir)
 
         except KeyboardInterrupt:
             logger.debug("Exiting due to ctrl+c")
 
     def _command_build(self):
-        self.build_filelist()
-        self.run_plugins()
-        if self.debuglevel == logging.DEBUG:
-            print "--- FILES ---"
-            pprint.pprint(dict(self.files), indent=4)
-            print
-            print "--- CONTEXT ---"
-            pprint.pprint(dict(self.context), indent=4)
-            print
-        self.write_output()
+        with InDirectory(self.root_directory):
+            self.build_filelist()
+            self.run_plugins()
+            if self.debuglevel == logging.DEBUG:
+                print "--- FILES ---"
+                pprint.pprint(dict(self.files), indent=4)
+                print
+                print "--- CONTEXT ---"
+                pprint.pprint(dict(self.context), indent=4)
+                print
+            self.write_output()
 
     def build_filelist(self):
         queue = [self.config['source']]

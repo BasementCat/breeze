@@ -1,8 +1,16 @@
 {{{
-    "title": "Index"
+    "title": "Test Index"
 }}}
 <html>
     <head>
         <title>{{ title }}{{ append_title }}</title>
     </head>
+    <body>
+        <h1>{{ title }}{{ append_title }}</h1>
+        <ol>
+            {% for f, d in blog_posts %}
+            <li>{{ d.title }} - {{ d.author }}, {{ d.published }}</li>
+            {% endfor %}
+        </ol>
+    </body>
 </html>
