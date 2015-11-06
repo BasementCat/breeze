@@ -54,14 +54,25 @@ class Breeze(object):
         parser = argparse.ArgumentParser(description="Breeze CLI utility")
         parser.add_argument('command', metavar='command', help="Command to run", choices=['run', 'build'])
         parser.add_argument('-c', '--config', help='Configuration file to load from', default='config.json')
-        parser.add_argument('-i', '--include', help='Include files and directories matching this pattern, recursively', action='append', default=['*'])
-        parser.add_argument('-x', '--exclude', help='Exclude files and directories matching this pattern, recursively', action='append', default=[])
-        parser.add_argument('-I', '--include-files', help='Include filenames matching this pattern', action='append', default=[])
-        parser.add_argument('-X', '--exclude-files', help='Exclude filenames matching this pattern', action='append', default=['_*'])
-        parser.add_argument('-s', '--source', help='Start at this directory location when looking for files', default='./')
-        parser.add_argument('-d', '--destination', help='Put the final result into this directory, creating it if it does not exist and replacing it if it does', default='./_compiled')
-        parser.add_argument('-p', '--port', help='For the run command, run on this port', default=8000, type=int)
-        parser.add_argument('-D', '--debug', help='Debug level', action='count')
+        parser.add_argument('-i', '--include', help='Include files and directories matching this pattern, recursively', action='append', default=None)
+        parser.add_argument('-x', '--exclude', help='Exclude files and directories matching this pattern, recursively', action='append', default=None)
+        parser.add_argument('-I', '--include-files', help='Include filenames matching this pattern', action='append', default=None)
+        parser.add_argument('-X', '--exclude-files', help='Exclude filenames matching this pattern', action='append', default=None)
+        parser.add_argument('-s', '--source', help='Start at this directory location when looking for files', default=None)
+        parser.add_argument('-d', '--destination', help='Put the final result into this directory, creating it if it does not exist and replacing it if it does', default=None)
+        parser.add_argument('-p', '--port', help='For the run command, run on this port', type=int, default=None)
+        parser.add_argument('-D', '--debug', help='Debug level', action='count', default=None)
+
+        self.config = {
+            'include': ['*'],
+            'exclude': [],
+            'include_files': [],
+            'exclude_files': ['_*'],
+            'source': './',
+            'destination': './_compiled',
+            'port': 8000,
+            'debug': 0,
+        }
 
         args = args or sys.argv
         opts = parser.parse_args(args[1:])
@@ -76,9 +87,9 @@ class Breeze(object):
             retcode = 0
             try:
                 with open(opts.config, 'r') as fp:
-                    self.config = json.load(fp)
+                    self.config.update(json.load(fp))
 
-                self.config.update(vars(opts))
+                self.config.update({k: v for k, v in vars(opts).items() if v is not None})
                 self.config['exclude'] += [self.config['config'], bin_file]
                 for key in ('include', 'exclude'):
                     self.config[key] = [os.path.realpath(os.path.abspath(v)) for v in self.config[key]]
