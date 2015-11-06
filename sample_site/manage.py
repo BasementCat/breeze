@@ -1,5 +1,5 @@
 from breeze import Breeze
-from breeze.plugins import Contents, Parsed, Data, Frontmatter, Jinja2, Weighted, Concat, Markdown, Blog, Promote
+from breeze.plugins import Contents, Parsed, Data, Frontmatter, Jinja2, Weighted, Concat, Markdown, Blog, Promote, Sass
 
 
 Breeze() \
@@ -11,4 +11,5 @@ Breeze() \
     .plugin(Markdown()) \
     .plugin(Blog()) \
     .plugin(Jinja2()) \
+    .plugin(Sass('scss', 'css')) \
     .run()

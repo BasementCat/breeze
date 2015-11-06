@@ -10,6 +10,7 @@ from collections import OrderedDict
 import yaml
 import markdown
 import arrow
+import sass
 
 from jinja2 import (
     BaseLoader,
@@ -281,3 +282,33 @@ class Demote(Plugin):
         for filename, file_data in self.breeze_instance.filelist(self.mask):
             file_dir, file_base = os.path.split(file_data['destination'])
             file_data['destination'] = os.path.join(file_dir, *(self.levels + [file_base]))
+
+
+class Sass(Plugin):
+    requirable = False
+
+    def __init__(self, directory, output_directory=None, output_style='nested', source_comments=False):
+        self.directory = directory
+        self.output_directory = output_directory
+        self.output_style = output_style
+        self.source_comments = source_comments
+
+    @classmethod
+    def requires(self):
+        return [Contents]
+
+    def _run(self):
+        for filename, file_data in self.breeze_instance.filelist(os.path.join(self.directory, '*')):
+            if fnmatch.fnmatch(filename, '*.scss'):
+                if not os.path.basename(filename).startswith('_'):
+                    file_data['_contents'] = sass.compile(
+                        string=file_data.get('_contents') or '',
+                        output_style=self.output_style,
+                        source_comments=self.source_comments,
+                        include_paths=[os.path.abspath(os.path.dirname(filename))]
+                    )
+                    file_data['destination'] = os.path.splitext(file_data['destination'])[0] + '.css'
+                    if self.output_directory:
+                        file_data['destination'] = os.path.join(self.output_directory, os.path.relpath(file_data['destination'], self.directory))
+                    continue
+            self.delete(filename)
