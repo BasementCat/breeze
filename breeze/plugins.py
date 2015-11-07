@@ -22,17 +22,106 @@ from jinja2 import (
 logger = logging.getLogger(__name__)
 
 
+class MergedDict(object):
+    def __init__(self, *args):
+        self.dicts = list(args)
+        self.changes = {}
+        self.dicts.insert(0, self.changes)
+        self.deletions = []
+
+    def __repr__(self):
+        out = {}
+        for d in reversed(self.dicts):
+            out.update(d)
+        for k in self.deletions:
+            if k in out:
+                del out[k]
+        return str(out)
+
+    def __str__(self):
+        return repr(self)
+
+    def __len__(self):
+        return sum([len(d) for d in self.dicts])
+
+    def __getitem__(self, key):
+        if key in self.deletions:
+            raise KeyError(key)
+        for d in self.dicts:
+            try:
+                return d[key]
+            except KeyError:
+                pass
+        raise KeyError(key)
+
+    def __setitem__(self, key, value):
+        self.changes[key] = value
+        if key in self.deletions:
+            self.deletions.remove(key)
+
+    def __delitem__(self, key):
+        if key not in self:
+            raise KeyError(key)
+        self.deletions.append(key)
+
+    def __contains__(self, item):
+        if item in self.deletions:
+            return False
+        for d in self.dicts:
+            if item in d:
+                return True
+        return False
+
+    def get(self, key, dfl=None):
+        try:
+            return self[key]
+        except KeyError:
+            return dfl
+
+    def set(self, key, value):
+        self[key] = value
+
+    def setdefault(self, key, dfl):
+        if key not in self:
+            self[key] = dfl
+        return self[key]
+
+    def keys(self):
+        return [key for d in self.dicts for key in d.keys()]
+
+    def values(self):
+        return [value for d in self.dicts for value in d.values()]
+
+    def items(self):
+        return [(key, value) for d in self.dicts for key, value in d.items()]
+
+    def update(self, value):
+        for k, v in value.items():
+            self[k] = v
+
+    def merge_changes(self):
+        self.dicts[-1].update(self.changes)
+        for key in self.deletions:
+            if key in self.dicts[-1]:
+                del self.dicts[-1][key]
+        return self.dicts[-1]
+
+
 class Plugin(object):
     run_once = False
     requirable = True
+
+    def __init__(self, context=None, *args, **kwargs):
+        self.additional_context = context or {}
 
     def run(self, breeze_instance):
         logger.debug("Run plugin: %s", self.__class__.__name__)
         self.deletion_queue = []
         self.breeze_instance = breeze_instance
-        self.context = breeze_instance.context
+        self.context = MergedDict(self.additional_context, breeze_instance.context)
         self.files = breeze_instance.files
         out = self._run()
+        self.context.merge_changes()
         for filename in self.deletion_queue:
             del self.files[filename]
         return out
@@ -173,7 +262,8 @@ class Weighted(Plugin):
 class Concat(Plugin):
     requirable = False
 
-    def __init__(self, name, dest, mask, filetype=None, merge_data=True, encapsulate_js=True):
+    def __init__(self, name, dest, mask, filetype=None, merge_data=True, encapsulate_js=True, *args, **kwargs):
+        super(Concat, self).__init__(*args, **kwargs)
         self.name = name
         self.dest = dest
         self.mask = mask
@@ -211,7 +301,8 @@ class Markdown(Plugin):
     # TODO: Add ability to filter on dir, check for run already, and parse only unparsed
     run_once = True
 
-    def __init__(self, change_extension=True, **kwargs):
+    def __init__(self, change_extension=True, *args, **kwargs):
+        super(Markdown, self).__init__(*args, **kwargs)
         self.change_extension = change_extension
         self.markdown_args = kwargs
 
@@ -234,7 +325,8 @@ class Blog(Plugin):
     requirable = False
     run_once = True
 
-    def __init__(self, mask='posts/*'):
+    def __init__(self, mask='posts/*', *args, **kwargs):
+        super(Blog, self).__init__(*args, **kwargs)
         self.mask = mask
 
     def _run(self):
@@ -259,7 +351,8 @@ class Blog(Plugin):
 class Promote(Plugin):
     requirable = False
 
-    def __init__(self, mask=None, levels=1):
+    def __init__(self, mask=None, levels=1, *args, **kwargs):
+        super(Promote, self).__init__(*args, **kwargs)
         self.mask = mask
         self.levels = levels
 
@@ -274,7 +367,8 @@ class Promote(Plugin):
 class Demote(Plugin):
     requirable = False
 
-    def __init__(self, mask=None, *args):
+    def __init__(self, mask=None, *args, **kwargs):
+        super(Demote, self).__init__(*args, **kwargs)
         self.mask = mask
         self.levels = args
 
@@ -287,7 +381,8 @@ class Demote(Plugin):
 class Sass(Plugin):
     requirable = False
 
-    def __init__(self, directory, output_directory=None, output_style='nested', source_comments=False):
+    def __init__(self, directory, output_directory=None, output_style='nested', source_comments=False, *args, **kwargs):
+        super(Sass, self).__init__(*args, **kwargs)
         self.directory = directory
         self.output_directory = output_directory
         self.output_style = output_style
