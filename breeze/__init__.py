@@ -1,3 +1,4 @@
+import time
 import pprint
 import shutil
 import json
@@ -37,12 +38,15 @@ class InDirectory(object):
 
 class Breeze(object):
     def __init__(self):
-        self.context = {}
-        self.files = OrderedDict()
+        self._reset()
         self.plugins = []
         self.once_plugins = []
         self.debuglevel = logging.ERROR
         self.root_directory = None
+
+    def _reset(self):
+        self.context = {}
+        self.files = OrderedDict()
 
     def filelist(self, pattern=None):
         for filename, file_data in self.files.items():
@@ -62,6 +66,7 @@ class Breeze(object):
         parser.add_argument('-d', '--destination', help='Put the final result into this directory, creating it if it does not exist and replacing it if it does', default=None)
         parser.add_argument('-p', '--port', help='For the run command, run on this port', type=int, default=None)
         parser.add_argument('-D', '--debug', help='Debug level', action='count', default=None)
+        parser.add_argument('--build-interval', help='When using the run command, don\'t build more frequently than this (seconds)', default=None)
 
         self.config = {
             'include': ['*'],
@@ -72,6 +77,7 @@ class Breeze(object):
             'destination': './_compiled',
             'port': 8000,
             'debug': 0,
+            'build_interval': 2,
         }
 
         args = args or sys.argv
@@ -114,9 +120,12 @@ class Breeze(object):
             logger.info("Running development server on http://localhost:%d/", self.config['port'])
 
             _breeze_instance = self
+            _breeze_instance._last_build = time.time() - 86400
             class _BuildingHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                 def do_GET(self, *args, **kwargs):
-                    _breeze_instance._command_build()
+                    if time.time() - _breeze_instance._last_build >= _breeze_instance.config['build_interval']:
+                        _breeze_instance._command_build()
+                        _breeze_instance._last_build = time.time()
                     return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self, *args, **kwargs)
 
             with InDirectory(self.config['destination'], self.root_directory):
@@ -129,6 +138,7 @@ class Breeze(object):
             logger.debug("Exiting due to ctrl+c")
 
     def _command_build(self):
+        self._reset()
         with InDirectory(self.root_directory):
             self.build_filelist()
             self.run_plugins()
