@@ -2,12 +2,15 @@
 import os
 from setuptools import setup
 
+# HAX - vboxsf filesystem won't allow hardlinks, so...
+del os.link
+
 def read(filen):
     with open(os.path.join(os.path.dirname(__file__), filen), "r") as fp:
         return fp.read()
  
 config = dict(
-    name="breeze",
+    name="libbreeze",
     version="0.1b",
     description="Assemble static sites",
     long_description=read("README.md"),
