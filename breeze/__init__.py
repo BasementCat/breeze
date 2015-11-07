@@ -144,13 +144,13 @@ class Breeze(object):
         with InDirectory(self.root_directory):
             self.build_filelist()
             self.run_plugins()
-            if self.debuglevel == logging.DEBUG:
-                print "--- FILES ---"
-                pprint.pprint(dict(self.files), indent=4)
-                print
-                print "--- CONTEXT ---"
-                pprint.pprint(dict(self.context), indent=4)
-                print
+            # if self.debuglevel == logging.DEBUG:
+            #     print "--- FILES ---"
+            #     pprint.pprint(dict(self.files), indent=4)
+            #     print
+            #     print "--- CONTEXT ---"
+            #     pprint.pprint(dict(self.context), indent=4)
+            #     print
             self.write_output()
 
     def build_filelist(self):
