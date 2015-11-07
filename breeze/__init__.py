@@ -29,10 +29,12 @@ class InDirectory(object):
 
     def __enter__(self):
         self.original_directory = os.getcwd()
+        logger.debug("cd %s -> %s", self.original_directory, self.directory)
         os.chdir(self.directory)
 
     def __exit__(self, type, value, traceback):
         if self.original_directory and self.original_directory != os.getcwd():
+            logger.debug("cd %s <- %s", self.original_directory, os.getcwd())
             os.chdir(self.original_directory)
 
 
@@ -96,7 +98,7 @@ class Breeze(object):
                     self.config.update(json.load(fp))
 
                 self.config.update({k: v for k, v in vars(opts).items() if v is not None})
-                self.config['exclude'] += [self.config['config'], bin_file]
+                self.config['exclude'] += [self.config['config'], bin_file, self.config['destination']]
                 for key in ('include', 'exclude'):
                     self.config[key] = [os.path.realpath(os.path.abspath(v)) for v in self.config[key]]
 
@@ -237,7 +239,8 @@ class Breeze(object):
                 raise
 
         for dirname in dirs:
-            os.makedirs(dirname)
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
 
         for filename, file_data in files.items():
             if file_data.get('skip_write'):

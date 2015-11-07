@@ -276,7 +276,8 @@ class Jinja2(Plugin):
                     args['files'] = self.files
                     file_data['destination'] = re.sub(ur'\.jinja', '', file_data['destination'])
                     file_data['_contents'] = self.environment.get_template(filename).render(**args)
-            elif file_data.get('jinja_template'):
+        for filename, file_data in self.files.items():
+            if file_data.get('jinja_template'):
                 self.mark_matched(filename)
                 args = {'filelist': self.breeze_instance.filelist}
                 args.update(self.context)
