@@ -264,6 +264,9 @@ class Jinja2(Plugin):
     def _run(self):
         self.loader = self._Loader(self.files)
         self.environment = Environment(loader=self.loader)
+        self.environment.filters.update({
+            'tojson': lambda text: json.dumps(text),
+        })
         self.environment.filters.update(self.context.get('_jinja_filters', {}))
 
         for filename, file_data in self.files.items():
