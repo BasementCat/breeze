@@ -11,7 +11,7 @@ def read(filen):
  
 config = dict(
     name="libbreeze",
-    version="0.1b",
+    version="0.2b",
     description="Assemble static sites",
     long_description=read("README.md"),
     author="Alec Elton",
