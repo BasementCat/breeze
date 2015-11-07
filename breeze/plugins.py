@@ -111,12 +111,14 @@ class Plugin(object):
     run_once = False
     requirable = True
 
-    def __init__(self, context=None, *args, **kwargs):
+    def __init__(self, context=None, file_data=None, *args, **kwargs):
         self.additional_context = context or {}
+        self.file_data = file_data or {}
 
     def run(self, breeze_instance):
         logger.debug("Run plugin: %s", self.__class__.__name__)
         self.deletion_queue = []
+        self.matched_files = []
         self.breeze_instance = breeze_instance
         self.context = MergedDict(self.additional_context, breeze_instance.context)
         self.files = breeze_instance.files
@@ -132,6 +134,11 @@ class Plugin(object):
     def delete(self, filename):
         self.deletion_queue.append(filename)
 
+    def mark_matched(self, filename):
+        self.matched_files.append(filename)
+        if filename in self.files:
+            self.files[filename].update(self.file_data)
+
     @classmethod
     def requires(self):
         return []
@@ -141,6 +148,7 @@ class Contents(Plugin):
     run_once = True
     def _run(self):
         for filename, file_data in self.files.items():
+            self.mark_matched(filename)
             with open(filename, 'r') as fp:
                 file_data['_contents'] = fp.read()
 
@@ -162,6 +170,9 @@ class Parsed(Plugin):
                     file_data['_contents_parsed'] = json.loads(file_data['_contents'])
                 elif filename.endswith('.yml') or filename.endswith('.yaml'):
                     file_data['_contents_parsed'] = yaml.load(file_data['_contents'])
+
+                if file_data['_contents_parsed'] is not None:
+                    self.mark_matched(filename)
 
 
 class Data(Plugin):
@@ -206,6 +217,7 @@ class Frontmatter(Plugin):
 
                 file_data.update(json.loads('{' + contents[:end_pos + 4].strip().lstrip('{').rstrip('}') + '}'))
                 contents = contents[end_pos + 4:]
+                self.mark_matched(filename)
             elif contents.startswith('---\n'):
                 try:
                     end_pos = string.index(contents, '\n---')
@@ -214,6 +226,7 @@ class Frontmatter(Plugin):
 
                 file_data.update(yaml.load(contents[:end_pos]))
                 contents = contents[end_pos + 4:]
+                self.mark_matched(filename)
             file_data['_contents'] = contents
 
 
@@ -244,6 +257,7 @@ class Jinja2(Plugin):
         for filename, file_data in self.files.items():
             if fnmatch.fnmatch(filename, '*.jinja*'):
                 if not file_data.get('skip_render'):
+                    self.mark_matched(filename)
                     args = {'filelist': self.breeze_instance.filelist}
                     args.update(self.context)
                     args.update(file_data)
@@ -281,6 +295,7 @@ class Concat(Plugin):
 
         for filename, file_data in self.files.items():
             if fnmatch.fnmatch(filename, self.mask):
+                self.mark_matched(filename)
                 if self.merge_data:
                     new_data.update(file_data)
                 contents = file_data.get('_contents') or ''
@@ -316,6 +331,7 @@ class Markdown(Plugin):
                 if file_data.get('skip_parse'):
                     continue
                 if '_contents' in file_data:
+                    self.mark_matched(filename)
                     file_data['_contents'] = markdown.markdown(file_data['_contents'], **self.markdown_args)
                     if self.change_extension:
                         file_data['destination'] = re.sub(ur'\.md$', '.html', file_data['destination'])
@@ -333,6 +349,7 @@ class Blog(Plugin):
         self.context['blog_posts'] = []
         for filename, file_data in self.files.items():
             if fnmatch.fnmatch(filename, self.mask):
+                self.mark_matched(filename)
                 default_data = {
                     'title': ' '.join([v[0].upper() + v[1:] for v in os.path.basename(filename).split('.')[0].split('-')]),
                     # TODO: this sucks, do it better
@@ -358,6 +375,7 @@ class Promote(Plugin):
 
     def _run(self):
         for filename, file_data in self.breeze_instance.filelist(self.mask):
+            self.mark_matched(filename)
             file_dir, file_base = os.path.split(file_data['destination'])
             for _ in range(self.levels):
                 file_dir = os.path.dirname(file_dir)
@@ -374,6 +392,7 @@ class Demote(Plugin):
 
     def _run(self):
         for filename, file_data in self.breeze_instance.filelist(self.mask):
+            self.mark_matched(filename)
             file_dir, file_base = os.path.split(file_data['destination'])
             file_data['destination'] = os.path.join(file_dir, *(self.levels + [file_base]))
 
@@ -396,6 +415,7 @@ class Sass(Plugin):
         for filename, file_data in self.breeze_instance.filelist(os.path.join(self.directory, '*')):
             if fnmatch.fnmatch(filename, '*.scss'):
                 if not os.path.basename(filename).startswith('_'):
+                    self.mark_matched(filename)
                     file_data['_contents'] = sass.compile(
                         string=file_data.get('_contents') or '',
                         output_style=self.output_style,
