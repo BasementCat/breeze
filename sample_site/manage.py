@@ -9,7 +9,7 @@ Breeze() \
     .plugin(Weighted()) \
     .plugin(Concat('js_concat', 'js/script.js', '*.js')) \
     .plugin(Markdown()) \
-    .plugin(Blog()) \
+    .plugin(Blog(file_data={'jinja_template': 'post.jinja.html'})) \
     .plugin(Jinja2()) \
     .plugin(Sass('scss', 'css')) \
     .run()
