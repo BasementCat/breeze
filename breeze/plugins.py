@@ -144,6 +144,18 @@ class Plugin(object):
         return []
 
 
+class Match(Plugin):
+    requirable = False
+
+    def __init__(self, mask=None, *args, **kwargs):
+        super(Match, self).__init__(*args, **kwargs)
+        self.mask = mask
+
+    def _run(self):
+        for filename, file_data in self.breeze_instance.filelist(self.mask):
+            self.mark_matched(filename)
+
+
 class Contents(Plugin):
     run_once = True
     def _run(self):
@@ -349,9 +361,10 @@ class Blog(Plugin):
     requirable = False
     run_once = True
 
-    def __init__(self, mask='posts/*', *args, **kwargs):
+    def __init__(self, mask='posts/*', permalink=None, *args, **kwargs):
         super(Blog, self).__init__(*args, **kwargs)
         self.mask = mask
+        self.permalink = permalink or (lambda post: post['destination'])
 
     def _run(self):
         self.context['blog_posts'] = []
@@ -369,6 +382,7 @@ class Blog(Plugin):
                 default_data.update(file_data)
                 default_data['published'] = arrow.get(default_data['published'])
                 file_data.update(default_data)
+                file_data['destination'] = self.permalink(file_data)
                 self.context['blog_posts'].append((filename, file_data))
         self.context['blog_posts'] = sorted(self.context['blog_posts'], key=lambda v: v[1]['published'], reverse=True)
 
