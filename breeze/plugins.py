@@ -23,7 +23,17 @@ logger = logging.getLogger(__name__)
 
 
 class MergedDict(object):
+    """\
+    Take multiple dictionaries, make them behave as though they were only one dictionary without modifying them.
+    """
+
     def __init__(self, *args):
+        """\
+        Create a new MergedDict instance.
+
+        The arguments are a list of dictionaries, with the first in the list being considered to be the "primary" one.
+        Changes made to this instance may optionally be merged into the primary dictionary.
+        """
         self.dicts = list(args)
         self.changes = {}
         self.dicts.insert(0, self.changes)
@@ -100,6 +110,9 @@ class MergedDict(object):
             self[k] = v
 
     def merge_changes(self):
+        """\
+        Apply the changes made to this object to the primary dictionary, and return it.
+        """
         self.dicts[-1].update(self.changes)
         for key in self.deletions:
             if key in self.dicts[-1]:
@@ -108,14 +121,35 @@ class MergedDict(object):
 
 
 class Plugin(object):
+    """\
+    Base class for Breeze plugins.
+
+    Provides a base class for Breeze plugins to inherit from, and several convenience methods.
+    """
     run_once = False
     requirable = True
 
     def __init__(self, context=None, file_data=None, *args, **kwargs):
+        """\
+        Plugin base class constructor.
+
+        Arguments:
+        context - A dictionary made available to the subclass's run method.
+        file_data - A dictionary that is merged into each "matched" file's file_data.
+        """
         self.additional_context = context or {}
         self.file_data = file_data or {}
 
     def run(self, breeze_instance):
+        """\
+        Run this plugin with a particular Breeze instance.
+
+        Internally, the context given in the constructor is temporarily merged with the Breeze instance's context and
+        made available to the plugin to use.  Then the subclass's _run() method is called to perform the plugin's work.
+
+        Arguments:
+        breeze_instance - Breeze class instance.
+        """
         logger.debug("Run plugin: %s", self.__class__.__name__)
         self.deletion_queue = []
         self.matched_files = []
@@ -129,25 +163,66 @@ class Plugin(object):
         return out
 
     def _run(self):
+        """\
+        Run this plugin.
+
+        Any subclass must override this method.
+        """
         raise NotImplementedError("Plugins must implement _run()")
 
     def delete(self, filename):
+        """\
+        Delete a file from the file list.
+
+        Because this is intended to be used during iteration through the file list, the filename is added to a queue of
+        files which are removed after the run has completed.
+
+        Arguments:
+        filename - Key of the file list to remove.
+        """
         self.deletion_queue.append(filename)
 
     def mark_matched(self, filename):
+        """\
+        Mark a file as "matched".
+
+        When files are marked as "matched" (that is, a plugin has performed its intended operation on that file), if
+        file_data was provided to the constructor it is merged into that file's file_data.
+
+        Arguments:
+        filename - Key of the file list to mark.
+        """
         self.matched_files.append(filename)
         if filename in self.files:
             self.files[filename].update(self.file_data)
 
     @classmethod
     def requires(self):
+        """\
+        Return required plugins.
+
+        A plugin may return a list of other plugins that are required for that plugin's operation, if they permit
+        themselves to be required (class variable required == True).
+
+        Returns a list of required plugin classes (not instances).
+        """
         return []
 
 
 class Match(Plugin):
+    """\
+    Match a set of files for the purpose of merging file_data.
+    """
     requirable = False
 
     def __init__(self, mask=None, *args, **kwargs):
+        """
+        Create a new Match instance.
+
+        Arguments:
+        mask - Filename mask to filter on, as accepted by fnmatch.  Note that matching is performed on the whole file
+            path, directory separators are not treated specially.
+        """
         super(Match, self).__init__(*args, **kwargs)
         self.mask = mask
 
@@ -157,6 +232,9 @@ class Match(Plugin):
 
 
 class Contents(Plugin):
+    """\
+    Load the contents of each file in the list.
+    """
     run_once = True
     def _run(self):
         for filename, file_data in self.files.items():
@@ -166,6 +244,11 @@ class Contents(Plugin):
 
 
 class Parsed(Plugin):
+    """\
+    Parse the contents of each file if it is of a supported filetype:
+    - JSON
+    - YAML
+    """
     run_once = True
 
     @classmethod
@@ -188,10 +271,19 @@ class Parsed(Plugin):
 
 
 class Data(Plugin):
+    """\
+    Merge the parsed contents of each file in the specified directory into the Breeze instance context.
+    """
     run_once = True
     requirable = False
 
     def __init__(self, dir_name='data', *args, **kwargs):
+        """\
+        Create a new Data instance.
+
+        Arguments:
+        dir_name - The directory name which will be treated as data, merged into the context, and removed from the list.
+        """
         super(Data, self).__init__(*args, **kwargs)
         self.dir_name = dir_name
 
@@ -208,6 +300,15 @@ class Data(Plugin):
 
 
 class Frontmatter(Plugin):
+    """\
+    Parse JSON or YAML front matter from each file's contents, merging it into that file's file_data.
+
+    JSON front matter must start with "{{{" and end with "}}}", each on their own line with no additional whitespace,
+    and no other content before.  The contents are a JSON object.
+
+    YAML front matter starts and ends with "---", each on their own line with no additional whitespace, or any content
+    before.  The contents are a YAML dictionary.
+    """
     run_once = True
 
     @classmethod
@@ -243,6 +344,17 @@ class Frontmatter(Plugin):
 
 
 class Jinja2(Plugin):
+    """\
+    Render Jinja2 template files.
+
+    Any file ending in ".jinja.<extension>" is rendered, with that file's file_data and the Breeze instance context as
+    variables.  ".jinja" is removed from the file's destination.
+
+    Any file having the attribute "jinja_template" set to True in its file_data is merged with the named template and
+    rendered to its original filename.
+
+    Files may specify "skip_render" to prevent them from being rendered as Jinja - useful for templates or partials.
+    """
     run_once = True
 
     @classmethod
@@ -291,6 +403,12 @@ class Jinja2(Plugin):
 
 
 class Weighted(Plugin):
+    """\
+    Sort the file list.
+
+    Each file in the file list is sorted according to the "weight" attribute in its file_data/front matter.  If no
+    weight was given, it defaults to 1000.
+    """
     def _run(self):
         weighted_files = []
         weighted_files = sorted(self.files.items(), key=lambda v: v[1].get('weight', 1000), reverse=False)
@@ -298,9 +416,28 @@ class Weighted(Plugin):
 
 
 class Concat(Plugin):
+    """\
+    Concatenate files.
+
+    Take a set of the file list, and concatenate them into a new file, removing the original files from the file list.
+    """
     requirable = False
 
     def __init__(self, name, dest, mask, filetype=None, merge_data=True, encapsulate_js=True, *args, **kwargs):
+        """\
+        Create a new Concat instance.
+
+        Arguments:
+        name - The new file's destination is inserted into the context using this key.
+        dest - New file's destination path.
+        mask - Mask to filter files on, as accepted by fnmatch.
+        filetype - The type of files being concatenated.  If left blank, an attempt is made to infer it from the mask.
+            Common types may be "css" or "js".
+        merge_data - If true, each concatenated file's file_data is merged together to form the file_data for the new
+            file.
+        encapsulate_js - If true, and the filetype is "js", the contents of each file is wrapped into a javascript
+            closure.
+        """
         super(Concat, self).__init__(*args, **kwargs)
         self.name = name
         self.dest = dest
@@ -336,11 +473,20 @@ class Concat(Plugin):
 
 
 class Markdown(Plugin):
+    """\
+    Render Markdown files as HTML.
+    """
     requirable = False
     # TODO: Add ability to filter on dir, check for run already, and parse only unparsed
     run_once = True
 
     def __init__(self, change_extension=True, *args, **kwargs):
+        """\
+        Create a new Markdown instance.
+
+        Arguments:
+        change_extension - If true, the destination file's extension is changed from ".md" to ".html".
+        """
         super(Markdown, self).__init__(*args, **kwargs)
         self.change_extension = change_extension
         self.markdown_args = kwargs
@@ -362,10 +508,26 @@ class Markdown(Plugin):
 
 
 class Blog(Plugin):
+    """\
+    Make a blog.
+
+    The matched files are treated as blog posts, and certain data (like title, slug, published date) are inferred from
+    the file if not given as file_data.
+
+    The blog posts are marked to avoid having them written out directly, and they are ordered in reverse chronological
+    order by their published date.
+    """
     requirable = False
     run_once = True
 
     def __init__(self, mask='posts/*', permalink=None, *args, **kwargs):
+        """\
+        Create a new Blog instance.
+
+        Arguments:
+        mask - Files to process, as accepted by fnmatch.
+        permalink - If given, a callable that takes each matched file's file_data and returns a new destination.
+        """
         super(Blog, self).__init__(*args, **kwargs)
         self.mask = mask
         self.permalink = permalink or (lambda post: post['destination'])
@@ -424,9 +586,26 @@ class Demote(Plugin):
 
 
 class Sass(Plugin):
+    """\
+    Parse Sass files into CSS files.
+
+    Takes the SCSS files (not starting with _) in the given directory, renders them to a CSS file, and places that file
+    into the output directory.
+
+    Original SCSS files, as well as includes starting with "_" are removed.
+    """
     requirable = False
 
     def __init__(self, directory, output_directory=None, output_style='nested', source_comments=False, *args, **kwargs):
+        """\
+        Create a new Sass instance.
+
+        Arguments:
+        directory - Source directory to search for scss files.
+        output_directory - Destination directory.  Defaults to be the same as the source directory.
+        output_style - Sass output style directive.
+        source_comments - Sass source_comments directive.
+        """
         super(Sass, self).__init__(*args, **kwargs)
         self.directory = directory
         self.output_directory = output_directory
