@@ -554,9 +554,21 @@ class Blog(Plugin):
 
 
 class Promote(Plugin):
+    """\
+    Promote files or directory trees up a level, closer to the root.
+    """
     requirable = False
 
     def __init__(self, mask=None, levels=1, by_directory=False, *args, **kwargs):
+        """\
+        Create a new Promote instance.
+
+        Arguments:
+        mask - File mask to filter on, as accepted by fnmatch.
+        levels - Directory levels to promote.
+        by_directory - If true, promote directory structures by removing the directories closest to the root.  Otherwise,
+            remove the directories closest to the file.
+        """
         super(Promote, self).__init__(*args, **kwargs)
         self.mask = mask
         self.levels = levels
@@ -576,9 +588,21 @@ class Promote(Plugin):
 
 
 class Demote(Plugin):
+    """\
+    Demote files or directory trees by adding additional directories.
+    """
     requirable = False
 
     def __init__(self, mask=None, by_directory=False, *args, **kwargs):
+        """\
+        Create a new Demote instance.
+
+        Arguments:
+        mask - File mask to filter on, as accepted by fnmatch.
+        by_directory - If true, promote directory structure by prepending the given directories to the beginning of the
+            file's path.  Otherwise, insert the directories between the file's path and filename.
+        *args - Directories to insert.
+        """
         super(Demote, self).__init__(*args, **kwargs)
         self.mask = mask
         self.levels = args
