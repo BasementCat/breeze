@@ -556,33 +556,42 @@ class Blog(Plugin):
 class Promote(Plugin):
     requirable = False
 
-    def __init__(self, mask=None, levels=1, *args, **kwargs):
+    def __init__(self, mask=None, levels=1, by_directory=False, *args, **kwargs):
         super(Promote, self).__init__(*args, **kwargs)
         self.mask = mask
         self.levels = levels
+        self.by_directory = by_directory
 
     def _run(self):
         for filename, file_data in self.breeze_instance.filelist(self.mask):
             self.mark_matched(filename)
-            file_dir, file_base = os.path.split(file_data['destination'])
-            for _ in range(self.levels):
-                file_dir = os.path.dirname(file_dir)
-            file_data['destination'] = os.path.join(file_dir, file_base)
+            if self.by_directory:
+                parts = os.path.normpath(file_data['destination']).split(os.sep)
+                file_data['destination'] = os.sep.join(parts[self.levels:])
+            else:
+                file_dir, file_base = os.path.split(file_data['destination'])
+                for _ in range(self.levels):
+                    file_dir = os.path.dirname(file_dir)
+                file_data['destination'] = os.path.join(file_dir, file_base)
 
 
 class Demote(Plugin):
     requirable = False
 
-    def __init__(self, mask=None, *args, **kwargs):
+    def __init__(self, mask=None, by_directory=False, *args, **kwargs):
         super(Demote, self).__init__(*args, **kwargs)
         self.mask = mask
         self.levels = args
+        self.by_directory = by_directory
 
     def _run(self):
         for filename, file_data in self.breeze_instance.filelist(self.mask):
             self.mark_matched(filename)
-            file_dir, file_base = os.path.split(file_data['destination'])
-            file_data['destination'] = os.path.join(file_dir, *(self.levels + [file_base]))
+            if self.by_directory:
+                file_data['destination'] = os.path.join(os.path.join(*self.levels), file_data['destination'])
+            else:
+                file_dir, file_base = os.path.split(file_data['destination'])
+                file_data['destination'] = os.path.join(file_dir, *(self.levels + [file_base]))
 
 
 class Sass(Plugin):
