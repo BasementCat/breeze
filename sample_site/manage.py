@@ -1,5 +1,10 @@
+import logging
+
 from breeze import Breeze
 from breeze.plugins import Contents, Parsed, Data, Frontmatter, Jinja2, Weighted, Concat, Markdown, Blog, Promote, Sass, Match
+
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 Breeze() \
