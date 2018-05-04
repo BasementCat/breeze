@@ -13,7 +13,7 @@ class MergedDict(object):
         """\
         Create a new MergedDict instance.
 
-        The arguments are a list of dictionaries, with the first in the list being considered to be the "primary" one.
+        The arguments are a list of dictionaries, with the *last* in the list being considered to be the "primary" one.
         Changes made to this instance may optionally be merged into the primary dictionary.
         """
         self.dicts = list(args)
