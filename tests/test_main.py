@@ -3,6 +3,8 @@ import os
 
 from breeze import InDirectory, Breeze, NotRequirableError
 
+from . import MockAttr
+
 
 class TestMain_InDirectory(unittest.TestCase):
     def test_in_directory(self):
@@ -67,12 +69,7 @@ class TestMain_Breeze(unittest.TestCase):
         def _mock_isdir(path):
             return path in ('/a', '/a/b')
 
-        _old_listdir = os.listdir
-        _old_isdir = os.path.isdir
-        os.listdir = _mock_listdir
-        os.path.isdir = _mock_isdir
-
-        try:
+        with MockAttr(os, listdir=_mock_listdir), MockAttr(os.path, isdir=_mock_isdir):
             b = Breeze()
             b.config = {
                 'source': '/a',
@@ -92,10 +89,6 @@ class TestMain_Breeze(unittest.TestCase):
                 },
                 b.files
             )
-
-        finally:
-            os.listdir = _old_listdir
-            os.path.isdir = _old_isdir
 
     def test__plugin_require(self):
         loaded = []
