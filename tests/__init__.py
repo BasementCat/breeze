@@ -1,3 +1,7 @@
+import fnmatch
+from StringIO import StringIO
+
+
 class MockAttr(object):
     def __init__(self, obj, **props):
         self.obj = obj
@@ -21,3 +25,27 @@ class MockBreeze(object):
         self.files = files or {}
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def filelist(self, pattern=None):
+        for filename, file_data in self.files.items():
+            if pattern and not fnmatch.fnmatch(filename, pattern):
+                continue
+            yield (filename, file_data)
+
+
+class MockFile(StringIO):
+    def __init__(self, *args, **kwargs):
+        StringIO.__init__(self, *args, **kwargs)
+        self._open = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.close()
+
+    def close(self):
+        if self._open:
+            self._open = False
+        else:
+            raise IOError("File already closed")
