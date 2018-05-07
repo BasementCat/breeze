@@ -13,3 +13,11 @@ class MockAttr(object):
         for key in self.old_props:
             setattr(self.obj, key, self.old_props[key])
             self.old_props = {}
+
+
+class MockBreeze(object):
+    def __init__(self, context=None, files=None, **kwargs):
+        self.context = context or {}
+        self.files = files or {}
+        for k, v in kwargs.items():
+            setattr(self, k, v)

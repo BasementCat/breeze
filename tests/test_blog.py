@@ -5,7 +5,7 @@ import os
 
 import arrow
 
-from . import MockAttr
+from . import MockAttr, MockBreeze
 
 from breeze.plugins.blog import Blog
 
@@ -72,30 +72,18 @@ class TestBlog(unittest.TestCase):
 
     def test_defaults(self):
         files, res, _ = self.fixture()
-
-        class MockBreeze(object):
-            def __init__(self, **kwargs):
-                for k, v in kwargs.items():
-                    setattr(self, k, v)
+        b = MockBreeze(files=files)
 
         with MockAttr(os.path, getmtime=lambda f: time.mktime(datetime.datetime(2018, 01, 01, 0, 0, 0, 0).timetuple())):
             p = Blog()
-            p.context = {}
-            p.files = files
-            p.run(MockBreeze(context={}, files=files))
-            self.assertEqual(res, p.context['blog_posts'])
+            p.run(b)
+            self.assertEqual(res, b.context['blog_posts'])
 
     def test_args(self):
         files, _, res = self.fixture()
-
-        class MockBreeze(object):
-            def __init__(self, **kwargs):
-                for k, v in kwargs.items():
-                    setattr(self, k, v)
+        b = MockBreeze(files=files)
 
         with MockAttr(os.path, getmtime=lambda f: time.mktime(datetime.datetime(2018, 01, 01, 0, 0, 0, 0).timetuple())):
             p = Blog(mask='blog_posts/*', permalink=lambda post: post['slug'])
-            p.context = {}
-            p.files = files
-            p.run(MockBreeze(context={}, files=files))
-            self.assertEqual(res, p.context['blog_posts'])
+            p.run(b)
+            self.assertEqual(res, b.context['blog_posts'])
