@@ -160,9 +160,9 @@ class Demote(Plugin):
             file's path.  Otherwise, insert the directories between the file's path and filename.
         *args - Directories to insert.
         """
-        super(Demote, self).__init__(*args, **kwargs)
+        super(Demote, self).__init__(**kwargs)
         self.mask = mask
-        self.levels = args
+        self.levels = list(args)
         self.by_directory = by_directory
 
     def _run(self):
