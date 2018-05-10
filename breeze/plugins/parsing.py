@@ -1,5 +1,6 @@
 import json
 import string
+import os
 
 import yaml
 
@@ -56,7 +57,7 @@ class Data(Plugin):
         return [Parsed]
 
     def _run(self):
-        for filename, file_data in self.files.items():
+        for filename, file_data in self.breeze_instance.filelist(os.path.join(self.dir_name, '*')):
             contents = file_data.get('_contents_parsed')
             if contents is not None:
                 self.context.update(contents)
@@ -104,4 +105,9 @@ class Frontmatter(Plugin):
                 file_data.update(yaml.load(contents[:end_pos]))
                 contents = contents[end_pos + 4:]
                 self.mark_matched(filename)
+
+            if contents != file_data['_contents']:
+                if contents.startswith('\n'):
+                    contents = contents[1:]
+
             file_data['_contents'] = contents
