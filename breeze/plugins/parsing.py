@@ -1,5 +1,4 @@
 import json
-import string
 import os
 
 import yaml
@@ -89,7 +88,7 @@ class Frontmatter(Plugin):
 
             if contents.startswith('{{{\n'):
                 try:
-                    end_pos = string.index(contents, '\n}}}')
+                    end_pos = contents.index('\n}}}')
                 except ValueError:
                     continue
 
@@ -98,7 +97,7 @@ class Frontmatter(Plugin):
                 self.mark_matched(filename)
             elif contents.startswith('---\n'):
                 try:
-                    end_pos = string.index(contents, '\n---')
+                    end_pos = contents.index('\n---')
                 except ValueError:
                     continue
 

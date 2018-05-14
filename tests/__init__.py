@@ -1,5 +1,5 @@
 import fnmatch
-from StringIO import StringIO
+from io import StringIO
 
 
 class MockAttr(object):

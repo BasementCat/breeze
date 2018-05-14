@@ -1,7 +1,7 @@
 import unittest
-from StringIO import StringIO
 from collections import OrderedDict
 
+import six
 
 from breeze.plugins.files import (
     Match,
@@ -43,7 +43,8 @@ class TestContents(unittest.TestCase):
         b = MockBreeze(files={'foo/a': {}, 'bar/a': {}})
 
         def _mock_open(fname, mode):
-            return MockFile(mode + '\n' + fname)
+            data = six.text_type(mode + '\n' + fname)
+            return MockFile(data)
 
         with MockAttr(breeze.plugins.files, open=_mock_open):
             p.run(b)

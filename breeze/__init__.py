@@ -5,8 +5,11 @@ import json
 import re
 import os
 import sys
-import SimpleHTTPServer
-import SocketServer
+try:
+    import SimpleHTTPServer as httpserver
+    import SocketServer
+except ImportError:
+    import http.server as httpserver
 import argparse
 import logging
 import fnmatch
@@ -102,7 +105,7 @@ class Breeze(object):
                 for key in ('include', 'exclude'):
                     self.config[key] = [os.path.realpath(os.path.abspath(v)) for v in self.config[key]]
 
-                cmd = getattr(self, '_command_' + re.sub(ur'[^\w]', '', args[1].lower()))
+                cmd = getattr(self, '_command_' + re.sub(r'[^\w]', '', args[1].lower()))
 
                 retcode = cmd() or 0
             except Exception as e:
@@ -123,12 +126,12 @@ class Breeze(object):
 
             _breeze_instance = self
             _breeze_instance._last_build = time.time() - 86400
-            class _BuildingHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+            class _BuildingHandler(httpserver.SimpleHTTPRequestHandler):
                 def do_GET(self, *args, **kwargs):
                     if time.time() - _breeze_instance._last_build >= _breeze_instance.config['build_interval']:
                         _breeze_instance._command_build()
                         _breeze_instance._last_build = time.time()
-                    return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self, *args, **kwargs)
+                    return httpserver.SimpleHTTPRequestHandler.do_GET(self, *args, **kwargs)
 
             with InDirectory(self.config['destination'], self.root_directory):
                 SocketServer.TCPServer(

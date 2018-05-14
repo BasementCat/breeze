@@ -80,7 +80,7 @@ class Concat(Plugin):
         self.name = name
         self.dest = dest
         self.mask = mask
-        self.filetype = filetype or re.split(ur'[^\w\d]+', mask)[-1]
+        self.filetype = filetype or re.split(r'[^\w\d]+', mask)[-1]
         self.merge_data = merge_data
         self.encapsulate_js = encapsulate_js
 

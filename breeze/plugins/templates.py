@@ -62,7 +62,7 @@ class Jinja2(Plugin):
                     args.update(self.context)
                     args.update(file_data)
                     args['files'] = self.files
-                    file_data['destination'] = re.sub(ur'\.jinja', '', file_data['destination'])
+                    file_data['destination'] = re.sub(r'\.jinja', '', file_data['destination'])
                     file_data['_contents'] = self.environment.get_template(filename).render(**args)
         for filename, file_data in self.files.items():
             if file_data.get('jinja_template'):
@@ -107,7 +107,7 @@ class Markdown(Plugin):
                     self.mark_matched(filename)
                     file_data['_contents'] = markdown.markdown(file_data['_contents'], **self.markdown_args)
                     if self.change_extension:
-                        file_data['destination'] = re.sub(ur'\.md$', '.html', file_data['destination'])
+                        file_data['destination'] = re.sub(r'\.md$', '.html', file_data['destination'])
 
 
 class Sass(Plugin):
