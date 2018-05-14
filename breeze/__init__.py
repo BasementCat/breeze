@@ -7,9 +7,10 @@ import os
 import sys
 try:
     import SimpleHTTPServer as httpserver
-    import SocketServer
+    import SocketServer as socketserver
 except ImportError:
     import http.server as httpserver
+    import socketserver
 import argparse
 import logging
 import fnmatch
@@ -134,7 +135,7 @@ class Breeze(object):
                     return httpserver.SimpleHTTPRequestHandler.do_GET(self, *args, **kwargs)
 
             with InDirectory(self.config['destination'], self.root_directory):
-                SocketServer.TCPServer(
+                socketserver.TCPServer(
                     ('', self.config['port']),
                     _BuildingHandler,
                 ).serve_forever()
