@@ -9,6 +9,8 @@ from jinja2 import (
     Environment,
     )
 
+import six
+
 import sass
 import markdown
 
@@ -39,12 +41,12 @@ class Jinja2(Plugin):
             self.filelist = filelist
 
         def get_source(self, environment, template):
-            try:
+            if template in self.filelist and '_contents' in self.filelist[template]:
                 contents = self.filelist[template]['_contents']
-                assert contents is not None
-                return contents, template, lambda: False
-            except (KeyError, AssertionError):
-                raise TemplateNotFound(template)
+                if contents is not None:
+                    return contents, template, lambda: False
+
+            raise TemplateNotFound(template)
 
     def _run(self):
         self.loader = self._Loader(self.files)

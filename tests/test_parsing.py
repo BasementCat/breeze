@@ -12,17 +12,17 @@ class TestParsed(unittest.TestCase):
     def test_parsed(self):
         p = Parsed()
         b = MockBreeze(files={
-            'test_json.json': {'_contents': '{"foo": ["bar", {"baz": "quux"}]}'},
-            'test_yaml.yaml': {'_contents': '---\nfoo:\n    - bar\n    -\n        baz: quux\n'},
-            'test_yaml2.yml': {'_contents': '---\nfoo:\n    - bar\n    -\n        baz: quux\n'},
-            'test_no_parse.foo': {'_contents': 'not a valid format for parsing'},
+            'test_json.json': {'_contents': u'{"foo": ["bar", {"baz": "quux"}]}'},
+            'test_yaml.yaml': {'_contents': u'---\nfoo:\n    - bar\n    -\n        baz: quux\n'},
+            'test_yaml2.yml': {'_contents': u'---\nfoo:\n    - bar\n    -\n        baz: quux\n'},
+            'test_no_parse.foo': {'_contents': u'not a valid format for parsing'},
         })
         p.run(b)
 
         self.assertEqual(
             {
                 'test_json.json': {
-                    '_contents': '{"foo": ["bar", {"baz": "quux"}]}',
+                    '_contents': u'{"foo": ["bar", {"baz": "quux"}]}',
                     '_contents_parsed': {
                         'foo': [
                             'bar',
@@ -31,7 +31,7 @@ class TestParsed(unittest.TestCase):
                     },
                 },
                 'test_yaml.yaml': {
-                    '_contents': '---\nfoo:\n    - bar\n    -\n        baz: quux\n',
+                    '_contents': u'---\nfoo:\n    - bar\n    -\n        baz: quux\n',
                     '_contents_parsed': {
                         'foo': [
                             'bar',
@@ -40,7 +40,7 @@ class TestParsed(unittest.TestCase):
                     },
                 },
                 'test_yaml2.yml': {
-                    '_contents': '---\nfoo:\n    - bar\n    -\n        baz: quux\n',
+                    '_contents': u'---\nfoo:\n    - bar\n    -\n        baz: quux\n',
                     '_contents_parsed': {
                         'foo': [
                             'bar',
@@ -49,7 +49,7 @@ class TestParsed(unittest.TestCase):
                     },
                 },
                 'test_no_parse.foo': {
-                    '_contents': 'not a valid format for parsing',
+                    '_contents': u'not a valid format for parsing',
                     '_contents_parsed': None,
                 },
             },
@@ -102,25 +102,25 @@ class TestFrontmatter(unittest.TestCase):
     def test_frontmatter(self):
         p = Frontmatter()
         b = MockBreeze(files={
-            'a': {'_contents': '{{{\n"foo": "bar"\n}}}\na'},
-            'b': {'_contents': '---\nbaz: quux\n---\nb'},
-            'c': {'_contents': '{{\ninvalid\n}}\nc'},
-            'd': {'_contents': '--\ninvalid\n--\nd'},
+            'a': {'_contents': u'{{{\n"foo": "bar"\n}}}\na'},
+            'b': {'_contents': u'---\nbaz: quux\n---\nb'},
+            'c': {'_contents': u'{{\ninvalid\n}}\nc'},
+            'd': {'_contents': u'--\ninvalid\n--\nd'},
         })
         p.run(b)
 
         self.assertEqual(
             {
                 'a': {
-                    '_contents': 'a',
+                    '_contents': u'a',
                     'foo': 'bar',
                 },
                 'b': {
-                    '_contents': 'b',
+                    '_contents': u'b',
                     'baz': 'quux',
                 },
-                'c': {'_contents': '{{\ninvalid\n}}\nc'},
-                'd': {'_contents': '--\ninvalid\n--\nd'},
+                'c': {'_contents': u'{{\ninvalid\n}}\nc'},
+                'd': {'_contents': u'--\ninvalid\n--\nd'},
             },
             b.files
         )

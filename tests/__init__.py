@@ -1,5 +1,5 @@
 import fnmatch
-from io import StringIO
+from io import BytesIO
 
 
 class MockAttr(object):
@@ -33,9 +33,9 @@ class MockBreeze(object):
             yield (filename, file_data)
 
 
-class MockFile(StringIO):
+class MockFile(BytesIO):
     def __init__(self, *args, **kwargs):
-        StringIO.__init__(self, *args, **kwargs)
+        BytesIO.__init__(self, *args, **kwargs)
         self._open = True
 
     def __enter__(self):

@@ -249,9 +249,13 @@ class Breeze(object):
         for filename, file_data in files.items():
             if file_data.get('skip_write'):
                 continue
-            with open(filename, 'w') as out_fp:
-                contents = file_data.get('_contents')
-                if contents is None:
-                    with open(file_data['source'], 'r') as in_fp:
+            with open(filename, 'wb') as out_fp:
+                contents = None
+                if file_data.get('_contents') is not None:
+                    contents = file_data['_contents'].encode('utf-8')
+                elif file_data.get('_contents_binary') is not None:
+                    contents = file_data['_contents_binary']
+                else:
+                    with open(file_data['source'], 'rb') as in_fp:
                         contents = in_fp.read()
                 out_fp.write(contents)

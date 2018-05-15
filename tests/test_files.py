@@ -43,15 +43,18 @@ class TestContents(unittest.TestCase):
         b = MockBreeze(files={'foo/a': {}, 'bar/a': {}})
 
         def _mock_open(fname, mode):
-            data = six.text_type(mode + '\n' + fname)
+            if six.PY2:
+                data = str(mode + '\n' + fname)
+            else:
+                data = bytes(mode + '\n' + fname, 'ascii')
             return MockFile(data)
 
         with MockAttr(breeze.plugins.files, open=_mock_open):
             p.run(b)
             self.assertEqual(
                 {
-                    'foo/a': {'_contents': 'r\nfoo/a'},
-                    'bar/a': {'_contents': 'r\nbar/a'}
+                    'foo/a': {'_contents': u'rb\nfoo/a', '_contents_binary': b'rb\nfoo/a'},
+                    'bar/a': {'_contents': u'rb\nbar/a', '_contents_binary': b'rb\nbar/a'}
                 },
                 b.files
             )
@@ -78,17 +81,17 @@ class TestWeighted(unittest.TestCase):
 
 class TestConcat(unittest.TestCase):
     f_skip = [
-        ('skipme', {'foo': 'a', '_contents': 'skipme'}),
+        ('skipme', {'foo': 'a', '_contents': u'skipme'}),
     ]
     f_js = [
-        ('js/1.js', {'bar': 'b', '_contents': 'js/1.js'}),
-        ('js/2.js', {'baz': 'c', '_contents': 'js/2.js'}),
-        ('js/3.js', {'quux': 'd', '_contents': 'js/3.js'}),
+        ('js/1.js', {'bar': 'b', '_contents': u'js/1.js'}),
+        ('js/2.js', {'baz': 'c', '_contents': u'js/2.js'}),
+        ('js/3.js', {'quux': 'd', '_contents': u'js/3.js'}),
     ]
     f_css = [
-        ('css/1.css', {'bar': 'b', '_contents': 'css/1.css'}),
-        ('css/2.css', {'baz': 'c', '_contents': 'css/2.css'}),
-        ('css/3.css', {'quux': 'd', '_contents': 'css/3.css'}),
+        ('css/1.css', {'bar': 'b', '_contents': u'css/1.css'}),
+        ('css/2.css', {'baz': 'c', '_contents': u'css/2.css'}),
+        ('css/3.css', {'quux': 'd', '_contents': u'css/3.css'}),
     ]
 
     def test_basic(self):
@@ -102,7 +105,7 @@ class TestConcat(unittest.TestCase):
                     'bar': 'b',
                     'baz': 'c',
                     'quux': 'd',
-                    '_contents': 'css/1.css\ncss/2.css\ncss/3.css',
+                    '_contents': u'css/1.css\ncss/2.css\ncss/3.css',
                     'destination': 'destfile'
                 })
             ]).items(),
@@ -124,7 +127,7 @@ class TestConcat(unittest.TestCase):
                     'bar': 'b',
                     'baz': 'c',
                     'quux': 'd',
-                    '_contents': 'css/1.css\ncss/2.css\ncss/3.css',
+                    '_contents': u'css/1.css\ncss/2.css\ncss/3.css',
                     'destination': 'destfile'
                 })
             ]).items(),
@@ -143,7 +146,7 @@ class TestConcat(unittest.TestCase):
         self.assertEqual(
             OrderedDict(self.f_skip + self.f_js + [
                 ('destfile', {
-                    '_contents': 'css/1.css\ncss/2.css\ncss/3.css',
+                    '_contents': u'css/1.css\ncss/2.css\ncss/3.css',
                     'destination': 'destfile'
                 })
             ]).items(),
@@ -165,7 +168,7 @@ class TestConcat(unittest.TestCase):
                     'bar': 'b',
                     'baz': 'c',
                     'quux': 'd',
-                    '_contents': '(function() {\n\njs/1.js\n\n})();\n(function() {\n\njs/2.js\n\n})();\n(function() {\n\njs/3.js\n\n})();',
+                    '_contents': u'(function() {\n\njs/1.js\n\n})();\n(function() {\n\njs/2.js\n\n})();\n(function() {\n\njs/3.js\n\n})();',
                     'destination': 'destfile'
                 })
             ]).items(),
@@ -187,7 +190,7 @@ class TestConcat(unittest.TestCase):
                     'bar': 'b',
                     'baz': 'c',
                     'quux': 'd',
-                    '_contents': 'js/1.js\njs/2.js\njs/3.js',
+                    '_contents': u'js/1.js\njs/2.js\njs/3.js',
                     'destination': 'destfile'
                 })
             ]).items(),

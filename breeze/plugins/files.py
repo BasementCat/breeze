@@ -1,7 +1,11 @@
+from __future__ import unicode_literals
+
 import re
 import os
 import fnmatch
 from collections import OrderedDict
+
+import six
 
 from .base import Plugin
 
@@ -36,8 +40,17 @@ class Contents(Plugin):
     def _run(self):
         for filename, file_data in self.files.items():
             self.mark_matched(filename)
-            with open(filename, 'r') as fp:
-                file_data['_contents'] = fp.read()
+            with open(filename, 'rb') as fp:
+                file_data['_contents_binary'] = fp.read()
+                file_data['_contents'] = None
+                for encoding in ('utf-8', 'latin1', 'ascii'):
+                    # TODO: maybe use chardet for this?
+                    try:
+                        file_data['_contents'] = file_data['_contents_binary'].decode(encoding)
+                    except UnicodeDecodeError:
+                        pass
+                    else:
+                        break
 
 
 class Weighted(Plugin):

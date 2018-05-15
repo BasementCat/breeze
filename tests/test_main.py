@@ -1,5 +1,6 @@
 import unittest
 import os
+from collections import OrderedDict
 
 from breeze import InDirectory, Breeze, NotRequirableError
 
@@ -81,12 +82,12 @@ class TestMain_Breeze(unittest.TestCase):
 
             b.build_filelist()
             self.assertEqual(
-                {
-                    'bar': {'source': 'bar', 'destination': 'bar'},
-                    'inc.foo': {'source': 'inc.foo', 'destination': 'inc.foo'},
-                    'b/bar': {'source': 'b/bar', 'destination': 'b/bar'},
-                    'b/inc.foo': {'source': 'b/inc.foo', 'destination': 'b/inc.foo'},
-                },
+                OrderedDict([
+                    ('bar', {'source': 'bar', 'destination': 'bar'}),
+                    ('inc.foo', {'source': 'inc.foo', 'destination': 'inc.foo'}),
+                    ('b/bar', {'source': 'b/bar', 'destination': 'b/bar'}),
+                    ('b/inc.foo', {'source': 'b/inc.foo', 'destination': 'b/inc.foo'}),
+                ]),
                 b.files
             )
 
