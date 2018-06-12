@@ -88,6 +88,9 @@ class Frontmatter(Plugin):
             except KeyError:
                 continue
 
+            if not file_data.get('_mimetype', '').startswith('text/'):
+                continue
+
             if contents.startswith('{{{\n'):
                 try:
                     end_pos = contents.index('\n}}}')

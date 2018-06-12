@@ -8,7 +8,7 @@ import mimetypes
 
 import six
 import magic
-import chardet
+import cchardet as chardet
 
 from .base import Plugin
 

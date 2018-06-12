@@ -102,10 +102,11 @@ class TestFrontmatter(unittest.TestCase):
     def test_frontmatter(self):
         p = Frontmatter()
         b = MockBreeze(files={
-            'a': {'_contents': u'{{{\n"foo": "bar"\n}}}\na'},
-            'b': {'_contents': u'---\nbaz: quux\n---\nb'},
-            'c': {'_contents': u'{{\ninvalid\n}}\nc'},
-            'd': {'_contents': u'--\ninvalid\n--\nd'},
+            'a': {'_contents': u'{{{\n"foo": "bar"\n}}}\na', '_mimetype': 'text/plain'},
+            'b': {'_contents': u'---\nbaz: quux\n---\nb', '_mimetype': 'text/plain'},
+            'c': {'_contents': u'{{\ninvalid\n}}\nc', '_mimetype': 'text/plain'},
+            'd': {'_contents': u'--\ninvalid\n--\nd', '_mimetype': 'text/plain'},
+            'e': {'_contents': b'this is a bytestring and won\'t be parsed', '_mimetype': 'binary/octet-stream'},
         })
         p.run(b)
 
@@ -113,14 +114,17 @@ class TestFrontmatter(unittest.TestCase):
             {
                 'a': {
                     '_contents': u'a',
+                    '_mimetype': 'text/plain',
                     'foo': 'bar',
                 },
                 'b': {
                     '_contents': u'b',
+                    '_mimetype': 'text/plain',
                     'baz': 'quux',
                 },
-                'c': {'_contents': u'{{\ninvalid\n}}\nc'},
-                'd': {'_contents': u'--\ninvalid\n--\nd'},
+                'c': {'_contents': u'{{\ninvalid\n}}\nc', '_mimetype': 'text/plain'},
+                'd': {'_contents': u'--\ninvalid\n--\nd', '_mimetype': 'text/plain'},
+                'e': {'_contents': b'this is a bytestring and won\'t be parsed', '_mimetype': 'binary/octet-stream'},
             },
             b.files
         )
