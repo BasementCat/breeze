@@ -4,10 +4,16 @@ import re
 import os
 import fnmatch
 from collections import OrderedDict
+import mimetypes
 
 import six
+import magic
+import chardet
 
 from .base import Plugin
+
+
+mimetypes.init()
 
 
 class Match(Plugin):
@@ -37,20 +43,37 @@ class Contents(Plugin):
     Load the contents of each file in the list.
     """
     run_once = True
+
+    @staticmethod
+    def detect_mimetype(name, data):
+        mimetype = magic.from_buffer(data[:1024], mime=True)
+        if mimetype is None or mimetype in ('application/octet-stream', 'binary/octet-stream'):
+            mimetype = mimetypes.guess_type(name, strict=False)[0] or mimetype
+
+        return mimetype
+
+    @staticmethod
+    def decode(mimetype, data):
+        if mimetype and mimetype.startswith('text/'):
+            encoding = chardet.detect(data)['encoding']
+            candidate_encodings = ['utf-8', 'latin1', 'ascii']
+            if encoding in candidate_encodings:
+                candidate_encodings.remove(encoding)
+            for e in [encoding] + candidate_encodings:
+                try:
+                    return data.decode(e)
+                except UnicodeDecodeError:
+                    pass
+
+        return data
+
     def _run(self):
         for filename, file_data in self.files.items():
             self.mark_matched(filename)
             with open(filename, 'rb') as fp:
-                file_data['_contents_binary'] = fp.read()
-                file_data['_contents'] = None
-                for encoding in ('utf-8', 'latin1', 'ascii'):
-                    # TODO: maybe use chardet for this?
-                    try:
-                        file_data['_contents'] = file_data['_contents_binary'].decode(encoding)
-                    except UnicodeDecodeError:
-                        pass
-                    else:
-                        break
+                file_data['_contents'] = fp.read()
+                file_data['_mimetype'] = self.detect_mimetype(filename, file_data['_contents'])
+                file_data['_contents'] = self.decode(file_data['_mimetype'], file_data['_contents'])
 
 
 class Weighted(Plugin):

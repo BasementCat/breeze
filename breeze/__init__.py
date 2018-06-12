@@ -252,10 +252,8 @@ class Breeze(object):
             with open(filename, 'wb') as out_fp:
                 contents = None
                 if file_data.get('_contents') is not None:
-                    contents = file_data['_contents'].encode('utf-8')
-                elif file_data.get('_contents_binary') is not None:
-                    contents = file_data['_contents_binary']
-                else:
-                    with open(file_data['source'], 'rb') as in_fp:
-                        contents = in_fp.read()
+                    if file_data.get('_mimetype') and file_data.get('_mimetype').startswith('text/'):
+                        contents = file_data['_contents'].encode('utf-8')
+                    else:
+                        contents = file_data['_contents']
                 out_fp.write(contents)

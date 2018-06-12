@@ -19,10 +19,10 @@ config = dict(
     url="https://github.com/BasementCat/breeze",
     packages=["breeze"],
     install_requires=[
-        'PyYAML', 'jinja2', 'markdown', 'arrow', 'libsass',
+        'PyYAML', 'jinja2', 'markdown', 'arrow', 'libsass', 'chardet', 'python-magic',
     ],
     test_suite="nose.collector",
-    tests_require=["nose"],
+    tests_require=["nose", "mock"],
 )
 
 if __name__ == "__main__":

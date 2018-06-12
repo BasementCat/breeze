@@ -1,6 +1,11 @@
 import unittest
 from collections import OrderedDict
 
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
+
 import six
 
 from breeze.plugins.files import (
@@ -12,7 +17,7 @@ from breeze.plugins.files import (
     Demote
 )
 import breeze.plugins.files
-from . import MockBreeze, MockAttr, MockFile
+from . import MockBreeze, MockFile
 
 
 class TestMatch(unittest.TestCase):
@@ -49,15 +54,30 @@ class TestContents(unittest.TestCase):
                 data = bytes(mode + '\n' + fname, 'ascii')
             return MockFile(data)
 
-        with MockAttr(breeze.plugins.files, open=_mock_open):
+        with mock.patch('breeze.plugins.files.open', new=mock.Mock(side_effect=_mock_open)):
             p.run(b)
             self.assertEqual(
                 {
-                    'foo/a': {'_contents': u'rb\nfoo/a', '_contents_binary': b'rb\nfoo/a'},
-                    'bar/a': {'_contents': u'rb\nbar/a', '_contents_binary': b'rb\nbar/a'}
+                    'foo/a': {'_contents': u'rb\nfoo/a', '_mimetype': 'text/plain'},
+                    'bar/a': {'_contents': u'rb\nbar/a', '_mimetype': 'text/plain'}
                 },
                 b.files
             )
+
+    def test_contents_image(self):
+        p = Contents()
+        b = MockBreeze(files={'tests/test.png': {}})
+
+        with open('tests/test.png', 'rb') as fp:
+            img = fp.read()
+
+        p.run(b)
+        self.assertEqual(
+            {
+                'tests/test.png': {'_contents': img, '_mimetype': 'image/png'},
+            },
+            b.files
+        )
 
 
 class TestWeighted(unittest.TestCase):
