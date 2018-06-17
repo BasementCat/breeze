@@ -159,3 +159,73 @@ class Sass(Plugin):
                         file_data['destination'] = os.path.join(self.output_directory, os.path.relpath(file_data['destination'], self.directory))
                     continue
             self.delete(filename)
+
+
+class HTML(Plugin):
+    """\
+    Pass through HTML files, optionally altering the markup.
+
+    The purpose of this plugin is to handle mixed text/HTML files where some basic
+    transformations should be applied, like automatically creating paragraphs from
+    blocks of one or more consecutive non-blank lines, or converting spaces to
+    non breaking spaces in some instances.
+    """
+    requirable = False
+
+    def __init__(self, mask=None, create_paragraphs=False, convert_indentation=False, nl_to_br=False, *args, **kwargs):
+        """\
+        Create a new HTML instance.
+
+        Arguments:
+        mask - Pattern of files to match, as accepted by fnmatch
+        create_paragraphs - If true, wrap <p></p> around blocks of consecutive non-blank lines
+        convert_indentation - Convert leading whitespace to &nbsp; - can be "first" for only the first line of a paragraph, or True/"*"/"all" for all lines
+        nl_to_br - Convert newlines in paragraphs to <br> tags - recommended if convert_intentation is True
+        """
+        super(HTML, self).__init__(*args, **kwargs)
+        self.mask = mask
+        self.create_paragraphs = create_paragraphs
+        self.convert_indentation = convert_indentation
+        self.nl_to_br = nl_to_br
+
+        if self.convert_indentation not in (False, True, 'first', '*', 'all'):
+            raise ValueError("convert_indentation must be False, 'first', or True/'*'/'all'")
+
+    @classmethod
+    def requires(self):
+        return [Contents]
+
+    def _run(self):
+        for filename, file_data in self.breeze_instance.filelist(self.mask):
+            self.mark_matched(filename)
+            blocks = [
+                list(filter(None, (b.rstrip('\n') for b in re.split(r'[\r\n]', block))))
+                for block
+                in re.split(r'(?:\r\n|\r|\n){2,}', file_data.get('_contents', ''))
+            ]
+
+            if self.convert_indentation or self.nl_to_br:
+                for block_i, block in enumerate(blocks):
+                    if self.convert_indentation:
+                        for line_i, line in enumerate(block):
+                            if self.convert_indentation in (True, '*', 'all') or (self.convert_indentation == 'first' and line_i == 0):
+                                new_line = []
+                                for c in line:
+                                    if c == '\t':
+                                        new_line.append('&nbsp;' * 4)
+                                    elif c == ' ':
+                                        new_line.append('&nbsp;')
+                                    else:
+                                        break
+                                new_line.append(re.sub(r'^\s+', '', line))
+                                blocks[block_i][line_i] = ''.join(new_line)
+
+                    if self.nl_to_br:
+                        blocks[block_i][:-1] = [l + '<br />' for l in blocks[block_i][:-1]]
+
+            blocks = ['\n'.join(lines) for lines in blocks]
+
+            if self.create_paragraphs:
+                blocks = ['<p>' + block + '</p>' for block in blocks]
+
+            file_data['_contents'] = '\n\n'.join(blocks)

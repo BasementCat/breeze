@@ -18,4 +18,5 @@ __all__ = [
     'Jinja2',
     'Markdown',
     'Sass',
+    'HTML',
 ]

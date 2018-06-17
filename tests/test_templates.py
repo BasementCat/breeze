@@ -1,6 +1,7 @@
 import unittest
+import textwrap
 
-from breeze.plugins.templates import Jinja2, Markdown, Sass
+from breeze.plugins.templates import Jinja2, Markdown, Sass, HTML
 from . import MockBreeze
 
 
@@ -131,6 +132,431 @@ class TestSass(unittest.TestCase):
                 'scss/main.scss': {
                     'destination': 'css/main.css',
                     '_contents': u'.foo {\n  color: red; }\n  .foo .bar {\n    color: blue; }\n',
+                }
+            },
+            b.files
+        )
+
+
+class TestHTML(unittest.TestCase):
+    maxDiff = None
+    sample_data = textwrap.dedent('''\
+        simple paragraph
+
+        multiline
+        paragraph
+
+            multiline paragraph
+        with first indent
+
+            multiline paragraph
+            with multi indent
+
+            multiline paragraph
+        \t  with mixed indent
+    ''')
+
+    def test_indent_invalid(self):
+        with self.assertRaises(ValueError):
+            p = HTML(convert_indentation='asdf')
+
+    def test_passthrough(self):
+        p = HTML()
+        b = MockBreeze(files={
+            'test.html': {
+                'destination': 'test.html',
+                '_contents': self.sample_data
+            },
+        })
+        p.run(b)
+
+        self.assertEqual(
+            {
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': self.sample_data.rstrip()
+                }
+            },
+            b.files
+        )
+
+    def test_paras(self):
+        p = HTML(create_paragraphs=True)
+        b = MockBreeze(files={
+            'test.html': {
+                'destination': 'test.html',
+                '_contents': self.sample_data
+            },
+        })
+        p.run(b)
+
+        self.assertEqual(
+            {
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': textwrap.dedent('''\
+                        <p>simple paragraph</p>
+
+                        <p>multiline
+                        paragraph</p>
+
+                        <p>    multiline paragraph
+                        with first indent</p>
+
+                        <p>    multiline paragraph
+                            with multi indent</p>
+
+                        <p>    multiline paragraph
+                        \t  with mixed indent</p>
+                    ''').rstrip()
+                }
+            },
+            b.files
+        )
+
+    def test_indent_all(self):
+        for arg in (True, '*', 'all'):
+            print("arg is " + str(arg))
+            p = HTML(convert_indentation=arg)
+            b = MockBreeze(files={
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': self.sample_data
+                },
+            })
+            p.run(b)
+
+            self.assertEqual(
+                {
+                    'test.html': {
+                        'destination': 'test.html',
+                        '_contents': textwrap.dedent('''\
+                            simple paragraph
+
+                            multiline
+                            paragraph
+
+                            &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                            with first indent
+
+                            &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                            &nbsp;&nbsp;&nbsp;&nbsp;with multi indent
+
+                            &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with mixed indent
+                        ''').rstrip()
+                    }
+                },
+                b.files
+            )
+
+    def test_indent_first(self):
+        p = HTML(convert_indentation='first')
+        b = MockBreeze(files={
+            'test.html': {
+                'destination': 'test.html',
+                '_contents': self.sample_data
+            },
+        })
+        p.run(b)
+
+        self.assertEqual(
+            {
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': textwrap.dedent('''\
+                        simple paragraph
+
+                        multiline
+                        paragraph
+
+                        &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                        with first indent
+
+                        &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                            with multi indent
+
+                        &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                        \t  with mixed indent
+                    ''').rstrip()
+                }
+            },
+            b.files
+        )
+
+    def test_indent_all_paras(self):
+        for arg in (True, '*', 'all'):
+            print("arg is " + str(arg))
+            p = HTML(convert_indentation=arg, create_paragraphs=True)
+            b = MockBreeze(files={
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': self.sample_data
+                },
+            })
+            p.run(b)
+
+            self.assertEqual(
+                {
+                    'test.html': {
+                        'destination': 'test.html',
+                        '_contents': textwrap.dedent('''\
+                            <p>simple paragraph</p>
+
+                            <p>multiline
+                            paragraph</p>
+
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                            with first indent</p>
+
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                            &nbsp;&nbsp;&nbsp;&nbsp;with multi indent</p>
+
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with mixed indent</p>
+                        ''').rstrip()
+                    }
+                },
+                b.files
+            )
+
+    def test_indent_first_paras(self):
+        p = HTML(convert_indentation='first', create_paragraphs=True)
+        b = MockBreeze(files={
+            'test.html': {
+                'destination': 'test.html',
+                '_contents': self.sample_data
+            },
+        })
+        p.run(b)
+
+        self.assertEqual(
+            {
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': textwrap.dedent('''\
+                        <p>simple paragraph</p>
+
+                        <p>multiline
+                        paragraph</p>
+
+                        <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                        with first indent</p>
+
+                        <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                            with multi indent</p>
+
+                        <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph
+                        \t  with mixed indent</p>
+                    ''').rstrip()
+                }
+            },
+            b.files
+        )
+
+    def test_nl2br(self):
+        p = HTML(nl_to_br=True)
+        b = MockBreeze(files={
+            'test.html': {
+                'destination': 'test.html',
+                '_contents': self.sample_data
+            },
+        })
+        p.run(b)
+
+        self.assertEqual(
+            {
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': textwrap.dedent('''\
+                        simple paragraph
+
+                        multiline<br />
+                        paragraph
+
+                            multiline paragraph<br />
+                        with first indent
+
+                            multiline paragraph<br />
+                            with multi indent
+
+                            multiline paragraph<br />
+                        \t  with mixed indent
+                    ''').rstrip()
+                }
+            },
+            b.files
+        )
+
+    def test_paras_nl2br(self):
+        p = HTML(create_paragraphs=True, nl_to_br=True)
+        b = MockBreeze(files={
+            'test.html': {
+                'destination': 'test.html',
+                '_contents': self.sample_data
+            },
+        })
+        p.run(b)
+
+        self.assertEqual(
+            {
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': textwrap.dedent('''\
+                        <p>simple paragraph</p>
+
+                        <p>multiline<br />
+                        paragraph</p>
+
+                        <p>    multiline paragraph<br />
+                        with first indent</p>
+
+                        <p>    multiline paragraph<br />
+                            with multi indent</p>
+
+                        <p>    multiline paragraph<br />
+                        \t  with mixed indent</p>
+                    ''').rstrip()
+                }
+            },
+            b.files
+        )
+
+    def test_indent_all_nl2br(self):
+        for arg in (True, '*', 'all'):
+            print("arg is " + str(arg))
+            p = HTML(convert_indentation=arg, nl_to_br=True)
+            b = MockBreeze(files={
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': self.sample_data
+                },
+            })
+            p.run(b)
+
+            self.assertEqual(
+                {
+                    'test.html': {
+                        'destination': 'test.html',
+                        '_contents': textwrap.dedent('''\
+                            simple paragraph
+
+                            multiline<br />
+                            paragraph
+
+                            &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                            with first indent
+
+                            &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                            &nbsp;&nbsp;&nbsp;&nbsp;with multi indent
+
+                            &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with mixed indent
+                        ''').rstrip()
+                    }
+                },
+                b.files
+            )
+
+    def test_indent_first_nl2br(self):
+        p = HTML(convert_indentation='first', nl_to_br=True)
+        b = MockBreeze(files={
+            'test.html': {
+                'destination': 'test.html',
+                '_contents': self.sample_data
+            },
+        })
+        p.run(b)
+
+        self.assertEqual(
+            {
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': textwrap.dedent('''\
+                        simple paragraph
+
+                        multiline<br />
+                        paragraph
+
+                        &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                        with first indent
+
+                        &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                            with multi indent
+
+                        &nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                        \t  with mixed indent
+                    ''').rstrip()
+                }
+            },
+            b.files
+        )
+
+    def test_indent_all_paras_nl2br(self):
+        for arg in (True, '*', 'all'):
+            print("arg is " + str(arg))
+            p = HTML(convert_indentation=arg, create_paragraphs=True, nl_to_br=True)
+            b = MockBreeze(files={
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': self.sample_data
+                },
+            })
+            p.run(b)
+
+            self.assertEqual(
+                {
+                    'test.html': {
+                        'destination': 'test.html',
+                        '_contents': textwrap.dedent('''\
+                            <p>simple paragraph</p>
+
+                            <p>multiline<br />
+                            paragraph</p>
+
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                            with first indent</p>
+
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                            &nbsp;&nbsp;&nbsp;&nbsp;with multi indent</p>
+
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with mixed indent</p>
+                        ''').rstrip()
+                    }
+                },
+                b.files
+            )
+
+    def test_indent_first_paras_nl2br(self):
+        p = HTML(convert_indentation='first', create_paragraphs=True, nl_to_br=True)
+        b = MockBreeze(files={
+            'test.html': {
+                'destination': 'test.html',
+                '_contents': self.sample_data
+            },
+        })
+        p.run(b)
+
+        self.assertEqual(
+            {
+                'test.html': {
+                    'destination': 'test.html',
+                    '_contents': textwrap.dedent('''\
+                        <p>simple paragraph</p>
+
+                        <p>multiline<br />
+                        paragraph</p>
+
+                        <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                        with first indent</p>
+
+                        <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                            with multi indent</p>
+
+                        <p>&nbsp;&nbsp;&nbsp;&nbsp;multiline paragraph<br />
+                        \t  with mixed indent</p>
+                    ''').rstrip()
                 }
             },
             b.files
