@@ -55,6 +55,9 @@ class Jinja2(Plugin):
             'tojson': lambda text: json.dumps(text),
         })
         self.environment.filters.update(self.context.get('_jinja_filters', {}))
+        self.environment.globals.update({
+            'filelist': self.breeze_instance.filelist,
+        })
 
         for filename, file_data in self.files.items():
             if fnmatch.fnmatch(filename, '*.jinja*'):

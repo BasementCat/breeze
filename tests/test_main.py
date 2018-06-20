@@ -25,29 +25,71 @@ class TestMain_InDirectory(unittest.TestCase):
 class TestMain_Breeze(unittest.TestCase):
     def test_filelist(self):
         b = Breeze()
-        b.files['foo'] = None
-        b.files['bar'] = None
-        b.files['baz'] = None
+        b.files['foo'] = {'a': 'foo', 'b': 1}
+        b.files['bar'] = {'a': 'bar', 'b': 2}
+        b.files['baz'] = {'a': 'baz', 'b': 3}
+        def fl(*keys):
+            return [(k, b.files[k]) for k in keys]
 
         self.assertEqual(
-            [('foo', None), ('bar', None), ('baz', None)],
+            fl('foo', 'bar', 'baz'),
             list(b.filelist())
         )
-
         self.assertEqual(
-            [('bar', None), ('baz', None)],
+            fl('bar', 'baz'),
             list(b.filelist(pattern='b*'))
         )
-
         self.assertEqual(
-            [('bar', None), ('baz', None)],
+            fl('bar', 'baz'),
             list(b.filelist(pattern='?a?'))
         )
-
         self.assertEqual(
-            [('foo', None)],
+            fl('foo'),
             list(b.filelist(pattern='*o'))
         )
+
+        self.assertEqual(
+            fl('foo'),
+            list(b.filelist(a__eq="foo"))
+        )
+        self.assertEqual(
+            fl('bar', 'baz'),
+            list(b.filelist(a__ne="foo"))
+        )
+        self.assertEqual(
+            fl('bar', 'baz'),
+            list(b.filelist(not__a__eq="foo"))
+        )
+        self.assertEqual(
+            fl('foo'),
+            list(b.filelist(b__lt=2))
+        )
+        self.assertEqual(
+            fl('foo', 'bar'),
+            list(b.filelist(b__lte=2))
+        )
+        self.assertEqual(
+            fl('baz'),
+            list(b.filelist(b__gt=2))
+        )
+        self.assertEqual(
+            fl('bar', 'baz'),
+            list(b.filelist(b__gte=2))
+        )
+        self.assertEqual(
+            fl('bar', 'baz'),
+            list(b.filelist(a__re="^.a.$"))
+        )
+        self.assertEqual(
+            fl('bar', 'baz'),
+            list(b.filelist(a__fn="b*"))
+        )
+        self.assertEqual(
+            [],
+            list(b.filelist(badkey__eq="foo"))
+        )
+        with self.assertRaises(ValueError):
+            list(b.filelist(a__badop="foo"))
 
     def test_build_filelist(self):
         def _mock_listdir(path):

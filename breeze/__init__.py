@@ -54,10 +54,59 @@ class Breeze(object):
         self.context = {}
         self.files = OrderedDict()
 
-    def filelist(self, pattern=None):
+    @classmethod
+    def _compare(self, key, op, invert, test, data):
+        value = data.get(key)
+        out = False
+        if op == 'eq':
+            out = (value == test)
+        elif op == 'ne':
+            out = (value != test)
+        elif op == 'lt':
+            out = (value < test)
+        elif op == 'lte':
+            out = (value <= test)
+        elif op == 'gt':
+            out = (value > test)
+        elif op == 'gte':
+            out = (value >= test)
+        elif op == 're':
+            out = re.match(test, value)
+        elif op == 'fn':
+            out = fnmatch.fnmatch(value, test)
+        else:
+            raise ValueError("Invalid op: " + op)
+
+        if invert:
+            return False if out else True
+        return True if out else False
+
+    @classmethod
+    def _compare_key(self, key, test, data):
+        op = None
+        invert = False
+        if key.startswith('not__'):
+            invert = True
+            key = key[5:]
+        if '__' in key:
+            key, op = key.rsplit('__', 1)
+
+        return self._compare(key, op or 'eq', invert, test, data)
+
+    def filelist(self, pattern=None, **kwargs):
         for filename, file_data in self.files.items():
             if pattern and not fnmatch.fnmatch(filename, pattern):
                 continue
+
+            if kwargs:
+                ok = True
+                for key, test in kwargs.items():
+                    if not self._compare_key(key, test, file_data):
+                        ok = False
+                        break
+                if not ok:
+                    continue
+
             yield (filename, file_data)
 
     def run(self, args=None, exit=True):
