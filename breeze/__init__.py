@@ -5,6 +5,7 @@ import json
 import re
 import os
 import sys
+import traceback
 try:
     import SimpleHTTPServer as httpserver
     import SocketServer as socketserver
@@ -179,8 +180,19 @@ class Breeze(object):
             class _BuildingHandler(httpserver.SimpleHTTPRequestHandler):
                 def do_GET(self, *args, **kwargs):
                     if time.time() - _breeze_instance._last_build >= _breeze_instance.config['build_interval']:
-                        _breeze_instance._command_build()
-                        _breeze_instance._last_build = time.time()
+                        try:
+                            _breeze_instance._command_build()
+                            _breeze_instance._last_build = time.time()
+                        except Exception as e:
+                            self.send_response(500)
+                            resp = traceback.format_exc()
+                            self.send_header('Content-type', 'text/plain')
+                            self.send_header('Content-length', len(resp))
+                            self.send_header('Content-encoding', 'utf-8')
+                            self.end_headers()
+                            self.wfile.write(resp.encode('utf-8'))
+                            self.wfile.flush()
+                            return
                     return httpserver.SimpleHTTPRequestHandler.do_GET(self, *args, **kwargs)
 
             with InDirectory(self.config['destination'], self.root_directory):
