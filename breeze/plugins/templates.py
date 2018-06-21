@@ -13,6 +13,7 @@ import six
 
 import sass
 import markdown
+import arrow
 
 from .base import Plugin
 from .files import Contents
@@ -57,6 +58,7 @@ class Jinja2(Plugin):
         self.environment.filters.update(self.context.get('_jinja_filters', {}))
         self.environment.globals.update({
             'filelist': self.breeze_instance.filelist,
+            'now': arrow.utcnow,
         })
 
         for filename, file_data in self.files.items():
